@@ -12,7 +12,7 @@ DEPDIR = make/deps
 OBJS = $(SRCS:src/%.cpp=$(OBJDIR)/%.o)
 DEPS = $(SRCS:src/%.cpp=$(DEPDIR)/%.d)
 
-HEADER = include/
+HEADER = include/irc.hpp
 
 COMPILED = 0
 MESSAGE_COLOR_GREEN = \033[1;32m
