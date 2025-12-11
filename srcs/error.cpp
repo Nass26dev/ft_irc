@@ -1,4 +1,4 @@
-#include "Error.hpp"
+#include "error.hpp"
 
 void Error::checkPortError(const std::string &port) {
     if (port.empty())

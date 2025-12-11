@@ -4,7 +4,8 @@ CXX = c++
 CFLAGS = -Wall -Werror -Wextra -std=c++98 -MMD -MP
 
 SRCS = srcs/main.cpp \
-		srcs/Error.cpp
+		srcs/error.cpp \
+		srcs/server.cpp
 
 MAKEDIR = .make
 OBJDIR = .make/objs
@@ -13,7 +14,8 @@ DEPDIR = .make/deps
 OBJS = $(SRCS:srcs/%.cpp=$(OBJDIR)/%.o)
 DEPS = $(SRCS:srcs/%.cpp=$(DEPDIR)/%.d)
 
-HEADER = includes/Error.hpp
+HEADER = includes/error.hpp \
+			includes/server.hpp
 
 COMPILED = 0
 MESSAGE_COLOR_GREEN = \033[1;32m

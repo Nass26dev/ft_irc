@@ -1,5 +1,6 @@
 #include <iostream>
-#include "Error.hpp"
+#include "error.hpp"
+#include "server.hpp"
 
 int main(int argc, char **argv) {
     if (argc != 3) {
@@ -11,6 +12,10 @@ int main(int argc, char **argv) {
         std::string password(argv[2]);
 
         Error::checkArgsError(port, password);
+
+        Server server(port, password);
+
+        server.run();
     }
     catch (Error::PortError& e) {
         std::cerr << e.what() << std::endl;
