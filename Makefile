@@ -1,18 +1,18 @@
 NAME = ircserv
 
-CC = c++
+CXX = c++
 CFLAGS = -Wall -Werror -Wextra -std=c++98 -MMD -MP
 
-SRCS = src/main.cpp
+SRCS = srcs/main.cpp
 
-MAKEDIR = make
-OBJDIR = make/objs
-DEPDIR = make/deps
+MAKEDIR = .make
+OBJDIR = .make/objs
+DEPDIR = .make/deps
 
-OBJS = $(SRCS:src/%.cpp=$(OBJDIR)/%.o)
-DEPS = $(SRCS:src/%.cpp=$(DEPDIR)/%.d)
+OBJS = $(SRCS:srcs/%.cpp=$(OBJDIR)/%.o)
+DEPS = $(SRCS:srcs/%.cpp=$(DEPDIR)/%.d)
 
-HEADER = include/irc.hpp
+HEADER = includes/irc.hpp
 
 COMPILED = 0
 MESSAGE_COLOR_GREEN = \033[1;32m
@@ -29,13 +29,13 @@ all: $(NAME)
     fi
 
 $(NAME): $(OBJS)
-	@$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
+	@$(CXX) $(CFLAGS) $(OBJS) -o $(NAME)
 	@$(eval COMPILED := 1)
 
-$(OBJDIR)/%.o: src/%.cpp $(HEADER)
+$(OBJDIR)/%.o: srcs/%.cpp $(HEADER)
 	@echo "$(MESSAGE_COLOR_YELLOW)Compiling $@... 🛠️$(MESSAGE_RESET)"
 	@mkdir -p $(OBJDIR) $(DEPDIR)
-	@$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+	@$(CXX) $(CFLAGS) -Iincludes -c $< -o $@
 	@mv -f $(OBJDIR)/$*.d $(DEPDIR)/$*.d 2>/dev/null || true
 	@$(eval COMPILED := 1)
 	@echo "$(MESSAGE_COLOR_GREEN)Compilation of $@ done! ✅$(MESSAGE_RESET)"
