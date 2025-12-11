@@ -13,7 +13,8 @@ class Error {
         
         class PortError : public std::exception {};
         class PasswordError : public std::exception {};
-    
+        class ServerError : public std::exception {};
+
         class PortIsEmpty : public PortError {
             const char *what() const throw();
         };
@@ -21,6 +22,18 @@ class Error {
             const char *what() const throw();
         };
         class PasswordIsEmpty : public PasswordError {
+            const char *what() const throw();
+        };
+        class SocketCreation : public ServerError {
+            const char *what() const throw();
+        };
+        class SocketFcntl : public ServerError {
+            const char *what() const throw();
+        };
+        class SocketBind : public ServerError {
+            const char *what() const throw();
+        };
+        class SocketListen : public ServerError {
             const char *what() const throw();
         };
 };
