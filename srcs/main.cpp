@@ -11,6 +11,7 @@ bool launchServer(const std::string &port, const std::string &password) {
     catch (...) {
 
     }
+    return false;
 }
 
 int main(int argc, char **argv) {
