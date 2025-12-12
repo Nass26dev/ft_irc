@@ -19,8 +19,10 @@ int main(int argc, char **argv) {
         std::cerr << "Error: Usage : ./ircserv <port> <password>\n";
         return 1;
     }
+
     std::string port(argv[1]);
     std::string password(argv[2]);
+    
     try {
         Error::checkArgsError(port, password);
     }

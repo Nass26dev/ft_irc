@@ -20,3 +20,5 @@ void Error::checkArgsError(const std::string &port, const std::string &password)
 const char *Error::PortIsEmpty::what() const throw() {return ("Error: Port is empty");}
 const char *Error::PortIsNotDigit::what() const throw() {return ("Error: Port contains non-digit characters");}
 const char *Error::PasswordIsEmpty::what() const throw() {return "Error: Password is empty";}
+const char *Error::SocketBind::what() const throw() {return "Error: Impossible to bind the socket";}
+const char *Error::SocketListen::what() const throw() {return "Error: Impossible to listen the socket";}
