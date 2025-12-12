@@ -18,7 +18,13 @@ class Server {
         int _listenSocketFd;
         std::string _port;
         std::string _password;
-        std::vector<pollfd> _poll_fds;
+        std::vector<pollfd> _pollf_fds;
+    
+        void createListenSocket();
+        void switchToNonBlocking();
+        void bindSocket();
+        void listenSocket();
+        void addToPoll();
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();

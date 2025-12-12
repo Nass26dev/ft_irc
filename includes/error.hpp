@@ -27,9 +27,6 @@ class Error {
         class SocketCreation : public ServerError {
             const char *what() const throw();
         };
-        class SocketFcntl : public ServerError {
-            const char *what() const throw();
-        };
         class SocketBind : public ServerError {
             const char *what() const throw();
         };
