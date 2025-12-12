@@ -3,6 +3,7 @@
 Server::Server(const std::string &port, const std::string &password) : _port(port), _password(password) {
     this->createListenSocket();
     this->switchToNonBlocking();
+    this->bindSocket();
     this->listenSocket();
     this->addToPoll();
 }
@@ -46,5 +47,5 @@ void Server::addToPoll() {
 }
 
 void Server::run() {
-    
+
 }
