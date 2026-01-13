@@ -81,9 +81,12 @@ void Server::add_poll_and_client(int client_fd)
 
 void Server::disconnect_client(int i)
 {
+    std::cout << _fds[i].fd << "disconected" << std::endl;
     close(_fds[i].fd);
     _fds.erase(_fds.begin() + i);
 }
+
+
 void Server::listening()
 {
     while (true)
@@ -102,12 +105,17 @@ void Server::listening()
                 else
                 {
                     char tmp_buffer[512];
-
                     int bytes = recv(_fds[i].fd,tmp_buffer, 511, 0);
                     if (bytes > 0)
                     {
-                       // Client *client = get_client_by_fd(_fds[i].fd);
-                        //client->appendToBuffer(tmp_buffer.bytes);
+                       Client *client = get_client_by_fd(_fds[i].fd);
+                        client->appendToBuffer(tmp_buffer,bytes);
+                        
+                        while(client->hasLine())
+                        {
+                            std::string line = client->extractLine();
+                            handle_irc_command(client, line);
+                        }
                         tmp_buffer[bytes] = '\0';
                         std::cout << "message =  "<< tmp_buffer << " "<<_fds[i].fd << std::endl;
                         //send(_fds[i].fd, _buffer,bytes, 0);
