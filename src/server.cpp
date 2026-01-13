@@ -105,21 +105,21 @@ void Server::listening()
                 else
                 {
                     char tmp_buffer[512];
+                    memset(tmp_buffer, 0, sizeof(tmp_buffer));
                     int bytes = recv(_fds[i].fd,tmp_buffer, 511, 0);
                     if (bytes > 0)
                     {
                        Client *client = get_client_by_fd(_fds[i].fd);
                         client->appendToBuffer(tmp_buffer,bytes);
-                        
+                        tmp_buffer[bytes] = '\0';
+
                         while(client->hasLine())
                         {
                             std::string line = client->extractLine();
-                            handle_irc_command(client, line);
+                          //handle_irc_command(client, line);
+                            std::cout << line << std::endl;
                         }
-                        tmp_buffer[bytes] = '\0';
-                        std::cout << "message =  "<< tmp_buffer << " "<<_fds[i].fd << std::endl;
                         //send(_fds[i].fd, _buffer,bytes, 0);
-                        continue; // si on rajotue du code ou pas 
                     }
                     else
                     {
