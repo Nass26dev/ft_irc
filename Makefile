@@ -1,58 +1,34 @@
-NAME = ircserv
+NAME = irc
 
-CXX = c++
-CFLAGS = -Wall -Werror -Wextra -std=c++98 -MMD -MP
+CC = c++
+CFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
+OBJ_DIR = obj
+INC_DIR = includes/
 
-SRCS = srcs/main.cpp
+SRCS = src/main.cpp \
+       src/client.cpp \
+       src/server.cpp
 
-MAKEDIR = .make
-OBJDIR = .make/objs
-DEPDIR = .make/deps
-
-OBJS = $(SRCS:srcs/%.cpp=$(OBJDIR)/%.o)
-DEPS = $(SRCS:srcs/%.cpp=$(DEPDIR)/%.d)
-
-HEADER = includes/irc.hpp
-
-COMPILED = 0
-MESSAGE_COLOR_GREEN = \033[1;32m
-MESSAGE_COLOR_BLUE = \033[1;34m
-MESSAGE_COLOR_YELLOW = \033[1;33m
-MESSAGE_COLOR_RED = \033[1;31m
-MESSAGE_RESET = \033[1;0m
+OBJS = $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
+DEPS = $(OBJS:.o=.d)
 
 all: $(NAME)
-	@if [ $(COMPILED) -eq 1 ]; then \
-        echo "$(MESSAGE_COLOR_BLUE)compilation done 🎉$(MESSAGE_RESET)"; \
-    else \
-        echo "$(MESSAGE_COLOR_BLUE)everything is already up to date 😉$(MESSAGE_RESET)"; \
-    fi
 
-$(NAME): $(OBJS)
-	@$(CXX) $(CFLAGS) $(OBJS) -o $(NAME)
-	@$(eval COMPILED := 1)
+$(OBJ_DIR)/%.o: src/%.cpp $(INC_DIR)/Client.hpp $(INC_DIR)/Server.hpp
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -I$(INC_DIR) -c $< -o $@
 
-$(OBJDIR)/%.o: srcs/%.cpp $(HEADER)
-	@echo "$(MESSAGE_COLOR_YELLOW)Compiling $@... 🛠️$(MESSAGE_RESET)"
-	@mkdir -p $(OBJDIR) $(DEPDIR)
-	@$(CXX) $(CFLAGS) -Iincludes -c $< -o $@
-	@mv -f $(OBJDIR)/$*.d $(DEPDIR)/$*.d 2>/dev/null || true
-	@$(eval COMPILED := 1)
-	@echo "$(MESSAGE_COLOR_GREEN)Compilation of $@ done! ✅$(MESSAGE_RESET)"
-
--include $(DEPS)
+$(NAME): $(OBJS) Makefile
+	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
 
 clean:
-	@if [ -d $(MAKEDIR) ] || [ -f $(NAME) ]; then \
-	rm -rf $(MAKEDIR); \
-    echo "$(MESSAGE_COLOR_RED)all files are deleted 🗑️$(MESSAGE_RESET)"; \
-    else \
-    	echo "$(MESSAGE_COLOR_GREEN)files already deleted 😉$(MESSAGE_RESET)"; \
-    fi
+	$(RM) -r $(OBJ_DIR)
 
 fclean: clean
-	@rm -f $(NAME)
+	$(RM) $(NAME)
 
 re: fclean all
+
+-include $(DEPS)
 
 .PHONY: all clean fclean re
