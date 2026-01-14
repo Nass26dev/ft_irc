@@ -1,5 +1,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
+#include "../includes/CmdParser.hpp"
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -85,7 +86,16 @@ void Server::disconnect_client(int i)
     close(_fds[i].fd);
     _fds.erase(_fds.begin() + i);
 }
-
+void Server::handle_command(Client *client,std::string line)
+{
+    (void)client;
+    Command cmd  = Parser::parse_string(line);
+    if(cmd.cmd == "NICK")
+    {
+        std::cout << "insinde NICK = " << cmd.args[0] << std::endl;
+        //handle_nick(client,cmd.args);
+    }
+}
 
 void Server::listening()
 {
@@ -116,10 +126,10 @@ void Server::listening()
                         while(client->hasLine())
                         {
                             std::string line = client->extractLine();
-                          //handle_irc_command(client, line);
-                            std::cout << line << std::endl;
+                            handle_command(client, line);
+                            //std::cout << line << std::endl;
                         }
-                        //send(_fds[i].fd, _buffer,bytes, 0);
+                       // send(_fds[i].fd, _buffer,bytes, 0);
                     }
                     else
                     {

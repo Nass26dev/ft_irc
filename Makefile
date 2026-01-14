@@ -7,7 +7,8 @@ INC_DIR = includes/
 
 SRCS = src/main.cpp \
        src/client.cpp \
-       src/server.cpp
+       src/server.cpp \
+	   src/CmdParser.cpp
 
 OBJS = $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(OBJS:.o=.d)

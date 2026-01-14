@@ -23,6 +23,7 @@ class Server
         void add_poll_and_client(int client_fd);
         void listening();
         void disconnect_client(int client_fd);
+        void handle_command(Client *client,std::string line);
         Client *get_client_by_fd(int fd);
         
 };
