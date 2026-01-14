@@ -17,6 +17,7 @@ class Client
         void appendToBuffer(const char* data, size_t len);
         bool hasLine() const;
         std::string extractLine();
+        void set_nickname(std::string new_nickname);
         ~Client();
 };
 

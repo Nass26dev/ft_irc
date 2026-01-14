@@ -86,14 +86,25 @@ void Server::disconnect_client(int i)
     close(_fds[i].fd);
     _fds.erase(_fds.begin() + i);
 }
+
+void Server::handle_nick(Client *client,std::vector<std::string> args)
+{
+    if(args.empty())
+        return ;
+    
+    std::string new_nick = args[0];
+    client->set_nickname(new_nick);
+    std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
+
+}
 void Server::handle_command(Client *client,std::string line)
 {
     (void)client;
     Command cmd  = Parser::parse_string(line);
     if(cmd.cmd == "NICK")
     {
-        std::cout << "insinde NICK = " << cmd.args[0] << std::endl;
-        //handle_nick(client,cmd.args);
+        //std::cout << "insinde NICK = " << cmd.args[0] << std::endl;
+        Server::handle_nick(client,cmd.args);
     }
 }
 

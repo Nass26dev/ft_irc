@@ -21,7 +21,10 @@ void Client::appendToBuffer(const char *data,size_t len)
     _buffer.append(data, len);
 }
 
-
+void Client::set_nickname(std::string new_nickname)
+{
+    _nickname = new_nickname;
+}
 bool Client::hasLine() const 
 {
 

@@ -24,6 +24,7 @@ class Server
         void listening();
         void disconnect_client(int client_fd);
         void handle_command(Client *client,std::string line);
+        void handle_nick(Client *client,std::vector<std::string> args);
         Client *get_client_by_fd(int fd);
         
 };
