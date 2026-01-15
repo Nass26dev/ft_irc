@@ -2,8 +2,11 @@
 
 
 
-Client::Client(int fd) : _fd(fd)
-{
+Client::Client(int fd) : _fd(fd) , _isOperator(false) , _isRegistered(false) , _isAuthenticated(false)
+{ 
+    (void)_isOperator;
+    _nickname = "";
+    _username = "";
     std::cout << _fd << std::endl;
 }
 
@@ -21,9 +24,14 @@ void Client::appendToBuffer(const char *data,size_t len)
     _buffer.append(data, len);
 }
 
-void Client::set_nickname(std::string new_nickname)
+void Client::setNickname(std::string newNickname)
 {
-    _nickname = new_nickname;
+    _nickname = newNickname;
+}
+
+void Client::setUsername(std::string newUsername)
+{
+    _username = newUsername;
 }
 bool Client::hasLine() const 
 {
@@ -43,4 +51,37 @@ std::string Client::extractLine()
 
     _buffer.erase(0, pos + 1);
     return line;
+}
+
+std::string Client::getNickname()
+{
+    return _nickname;
+}
+std::string Client::getUsername()
+{
+    return _username;
+}
+
+bool Client::getIsAuthenticated()
+{
+    return _isAuthenticated;
+}
+bool Client::getIsRegistered()
+{
+    return _isRegistered;
+}
+void Client::setIsAuthenticated()
+{
+    if(_isAuthenticated == true)
+        _isAuthenticated = false;
+    else
+        _isAuthenticated = true;
+}
+
+void Client::setIsRegistered()
+{
+    if(_isRegistered == true)
+        _isRegistered = false;
+    else
+       _isRegistered = true;
 }

@@ -6,11 +6,12 @@
 
 class Client;
 //class Topic;
-
+extern bool server_running;
 class Server
 {
     private:
         int _server_fd;
+        std::string _server_name;
         std::vector<pollfd> _fds;
         std::vector<Client> _clients;
         //std::vector<Topic> _topics;
@@ -20,12 +21,15 @@ class Server
         Server(int port,std::string password);
         ~Server();
         void init();
-        void add_poll_and_client(int client_fd);
+        void addPollAndClient(int client_fd);
         void listening();
-        void disconnect_client(int client_fd);
-        void handle_command(Client *client,std::string line);
-        void handle_nick(Client *client,std::vector<std::string> args);
-        Client *get_client_by_fd(int fd);
+        void disconnectClient(int client_fd);
+        void handleCommand(Client *client,std::string line);
+        void handleNick(Client *client,std::vector<std::string> args);
+        void handleUsername(Client *client,std::vector<std::string> args);
+        bool handlePassword(std::vector<std::string> args);
+        void stop();
+        Client *getClientByFd(int fd);
         
 };
 

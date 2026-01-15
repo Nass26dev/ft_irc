@@ -11,11 +11,24 @@
 #include <iostream>
 #include <cstdlib>
 
-Server::Server(int port,std::string  password) : _port(port) ,_password(password) {}
+Server::Server(int port,std::string  password) : _server_name("IRC") ,_port(port),_password(password)  {}
 
 Server::~Server() {}
 
-Client *Server::get_client_by_fd(int fd)
+void Server::stop() 
+{
+
+    for (size_t i = 0; i < _fds.size(); i++) 
+    {
+
+        close(_fds[i].fd);
+    }
+    std::cout << "JE FERME LE SEVEUR " << std::endl;
+    _fds.clear();
+
+    std::cout << _fds.size() << std::endl;
+}
+Client *Server::getClientByFd(int fd)
 {
     for(size_t i = 0; i < _clients.size();i++)
     {
@@ -28,30 +41,31 @@ void Server::init()
 {
     _server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (_server_fd < 0)
-    {
-        //perror("socket");
         exit(1);
-    }
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;             
     addr.sin_addr.s_addr = htonl(INADDR_ANY); 
     addr.sin_port = htons(_port);
 
+    int opt = 1;
+    // Cette fonction permet de réutiliser le port immédiatement même s'il est en TIME_WAIT
+    if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) 
+    {
+        exit(EXIT_FAILURE);
+    }
     if (bind(_server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        //perror("bind");
         close(_server_fd);
         exit(1);
     }
 
     if (listen(_server_fd, SOMAXCONN) < 0)
     {
-        //perror("listen");
         close(_server_fd);
         exit(1);
     }
-    std::cout << "Server initialized and listening on port 6667..." << std::endl;
+    std::cout << "Server initialized and listening on port " << _port << "..." << std::endl;
     pollfd p;
     p.fd = _server_fd;
     p.events = POLLIN;
@@ -61,7 +75,7 @@ void Server::init()
     listening();
 }
 
-void Server::add_poll_and_client(int client_fd)
+void Server::addPollAndClient(int client_fd)
 {
     for (size_t i = 0; i < _fds.size(); i++)
     {
@@ -80,37 +94,88 @@ void Server::add_poll_and_client(int client_fd)
 
 }
 
-void Server::disconnect_client(int i)
+void Server::disconnectClient(int i)
 {
     std::cout << _fds[i].fd << "disconected" << std::endl;
     close(_fds[i].fd);
     _fds.erase(_fds.begin() + i);
 }
 
-void Server::handle_nick(Client *client,std::vector<std::string> args)
+void Server::handleNick(Client *client,std::vector<std::string> args)
 {
     if(args.empty())
         return ;
     
     std::string new_nick = args[0];
-    client->set_nickname(new_nick);
+    client->setNickname(new_nick);
     std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
 
 }
-void Server::handle_command(Client *client,std::string line)
+void Server::handleUsername(Client *client,std::vector<std::string> args)
 {
-    (void)client;
+    if(args.empty())
+        return ;
+    
+    std::string new_username = args[0];
+    client->setUsername(new_username);
+}
+bool Server::handlePassword(std::vector<std::string> args)
+{
+
+    if(args[0] == _password)
+    {
+        std::cout << "Acces garented" << std::endl;
+        return true;
+    }
+    else
+    {
+       // std::cerr << "rejected wrong password" << std::endl;
+        return false;
+    }
+}
+void Server::handleCommand(Client *client,std::string line)
+{
+    std::cout << "Before parsing = " <<  line << std::endl;
     Command cmd  = Parser::parse_string(line);
     if(cmd.cmd == "NICK")
     {
-        //std::cout << "insinde NICK = " << cmd.args[0] << std::endl;
-        Server::handle_nick(client,cmd.args);
+        std::cout << "NICK = " << cmd.args[0] << std::endl;
+        Server::handleNick(client,cmd.args);
     }
+    else if(cmd.cmd == "PASS")
+    {
+        std::cout << "PASS = " << cmd.args[0] << std::endl;
+       if(Server::handlePassword(cmd.args) == false)
+            throw std::runtime_error("Wrong Password");
+        client->setIsAuthenticated();
+    }
+    else if(cmd.cmd == "USER")
+    {
+        std::cout << "USER = " << cmd.args[0] << std::endl;
+        Server::handleUsername(client,cmd.args);
+    }
+    else
+    {
+        return;
+    }
+
+    std::cout << client->getIsRegistered()<< "     " << client->getIsAuthenticated() << std::endl;
+    if (!client->getIsRegistered() && client->getIsAuthenticated() 
+        && !client->getNickname().empty() && !client->getUsername().empty()) 
+    {
+
+        client->setIsRegistered();
+        std::string welcome = ":" + _server_name + " 001 " + client->getNickname() 
+                            + " :Welcome to the IRC Network " + client->getNickname() + "\r\n";
+        
+        send(client->getFd(), welcome.c_str(), welcome.length(), 0);
+    }
+
 }
 
 void Server::listening()
 {
-    while (true)
+    while (server_running)
     {
         poll(_fds.data(), _fds.size(), -1);
 
@@ -121,35 +186,44 @@ void Server::listening()
                 if (_fds[i].fd == _server_fd)
                 {
                     int client_fd = accept(_server_fd, NULL, NULL);
-                    add_poll_and_client(client_fd);
+                    addPollAndClient(client_fd);
                 }
                 else
                 {
                     char tmp_buffer[512];
                     memset(tmp_buffer, 0, sizeof(tmp_buffer));
                     int bytes = recv(_fds[i].fd,tmp_buffer, 511, 0);
+                    tmp_buffer[bytes] = '\0';
                     if (bytes > 0)
                     {
-                       Client *client = get_client_by_fd(_fds[i].fd);
+                       Client *client = getClientByFd(_fds[i].fd);
                         client->appendToBuffer(tmp_buffer,bytes);
-                        tmp_buffer[bytes] = '\0';
-
+                        
                         while(client->hasLine())
                         {
                             std::string line = client->extractLine();
-                            handle_command(client, line);
+                            try
+                            {
+                                handleCommand(client, line);
+                            }
+                            catch(std::exception &e)
+                            {
+                                disconnectClient(i);
+                                i--;
+                                std::cout << e.what() << std::endl;
+                            }
                             //std::cout << line << std::endl;
                         }
                        // send(_fds[i].fd, _buffer,bytes, 0);
                     }
                     else
                     {
-                            disconnect_client(i);
+                            disconnectClient(i);
                             i--;
                     }
                 }
             }
         }
     }
-
+    stop();
 }

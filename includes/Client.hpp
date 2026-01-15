@@ -10,14 +10,27 @@ class Client
         std::string _nickname;
         std::string _username;
         std::string _buffer;
+        bool _isOperator;
+        bool _isRegistered;
+        bool _isAuthenticated;
         
-    public:
+        public:
         Client(int fd);
-        int getFd() const;
         void appendToBuffer(const char* data, size_t len);
         bool hasLine() const;
         std::string extractLine();
-        void set_nickname(std::string new_nickname);
+        
+        void setNickname(std::string newNickname);
+        void setUsername(std::string newUsername);
+        
+        void setIsRegistered();
+        void setIsAuthenticated();
+        
+        int getFd() const;
+        bool getIsRegistered();
+        bool getIsAuthenticated();
+        std::string getNickname();
+        std::string getUsername();
         ~Client();
 };
 
