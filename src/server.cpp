@@ -49,7 +49,7 @@ void Server::init()
     addr.sin_port = htons(_port);
 
     int opt = 1;
-    // Cette fonction permet de réutiliser le port immédiatement même s'il est en TIME_WAIT
+    
     if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) 
     {
         exit(EXIT_FAILURE);
@@ -108,7 +108,7 @@ void Server::handleNick(Client *client,std::vector<std::string> args)
     
     std::string new_nick = args[0];
     client->setNickname(new_nick);
-    std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
+   // std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
 
 }
 void Server::handleUsername(Client *client,std::vector<std::string> args)
@@ -128,38 +128,71 @@ bool Server::handlePassword(std::vector<std::string> args)
         return true;
     }
     else
-    {
-       // std::cerr << "rejected wrong password" << std::endl;
         return false;
+}
+
+int Server::getFdByClientName(std::string clientName)
+{
+    for(size_t i = 0; i < _clients.size();i++)
+    {
+        if(_clients[i].getUsername() == clientName)
+        {
+            return _clients[i].getFd();
+        }
     }
+    std::cout << "on trouve pas le nom" << std::endl;
+    return 1;
+}
+void Server::privateMessage(Client *client, std::vector<std::string> args)
+{
+    if (args.size() < 2) return;
+
+    std::string target = args[0];
+    std::string msg = args[1];
+
+    int fdTarget = getFdByClientName(target);
+    if (fdTarget == -1) return;
+    
+    std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
+    
+    send(fdTarget, fullMsg.c_str(), fullMsg.length(), 0);
 }
 void Server::handleCommand(Client *client,std::string line)
 {
-    std::cout << "Before parsing = " <<  line << std::endl;
+   // std::cout << "Before parsing = " <<  line << std::endl;
     Command cmd  = Parser::parse_string(line);
+    // if(!cmd.args[0].empty())
+    // {
+    //     std::cout << "After parseing = " << cmd.args[0] << std::endl;// "    " <<  cmd.args[1] << std::endl;
+    // }
     if(cmd.cmd == "NICK")
     {
-        std::cout << "NICK = " << cmd.args[0] << std::endl;
+       // std::cout << "NICK = " << cmd.args[0] << std::endl;
         Server::handleNick(client,cmd.args);
     }
     else if(cmd.cmd == "PASS")
     {
-        std::cout << "PASS = " << cmd.args[0] << std::endl;
+        //std::cout << "PASS = " << cmd.args[0] << std::endl;
        if(Server::handlePassword(cmd.args) == false)
             throw std::runtime_error("Wrong Password");
         client->setIsAuthenticated();
     }
     else if(cmd.cmd == "USER")
     {
-        std::cout << "USER = " << cmd.args[0] << std::endl;
+        //std::cout << "USER = " << cmd.args[0] << std::endl;
         Server::handleUsername(client,cmd.args);
+    }
+    else if (cmd.cmd == "PRIVMSG")
+    {
+        //std::cout << "PRIVATE MSG" << std::endl;
+        Server::privateMessage(client,cmd.args);
     }
     else
     {
         return;
     }
 
-    std::cout << client->getIsRegistered()<< "     " << client->getIsAuthenticated() << std::endl;
+  //  std::cout << client->getIsRegistered()<< "     " << client->getIsAuthenticated() << std::endl;
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {

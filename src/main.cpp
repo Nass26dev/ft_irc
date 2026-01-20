@@ -59,8 +59,7 @@ int main(int argc,char **argv)
         std::cout << "CHECK ENTRY" << std::endl;
         return 1;
     }
-    
-   Server a(atoi(argv[1]),argv[2]);
-    
+        
+    Server a(atoi(argv[1]),argv[2]);
    a.init();
 }

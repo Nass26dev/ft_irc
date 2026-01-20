@@ -28,6 +28,8 @@ class Server
         void handleNick(Client *client,std::vector<std::string> args);
         void handleUsername(Client *client,std::vector<std::string> args);
         bool handlePassword(std::vector<std::string> args);
+        void privateMessage(Client *client, std::vector<std::string> args);
+        int  getFdByClientName(std::string clientName);
         void stop();
         Client *getClientByFd(int fd);
         
