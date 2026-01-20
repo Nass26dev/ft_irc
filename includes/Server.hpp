@@ -3,9 +3,10 @@
 #include <vector>
 #include <iostream>
 #include <poll.h>
+#include "Channel.hpp"
 
 class Client;
-//class Topic;
+class Channel;
 extern bool server_running;
 class Server
 {
@@ -13,8 +14,8 @@ class Server
         int _server_fd;
         std::string _server_name;
         std::vector<pollfd> _fds;
-        std::vector<Client> _clients;
-        //std::vector<Topic> _topics;
+        std::vector<Client*> _clients;
+        std::vector<Channel*> _channels;
         int _port;
         std::string _password;
     public:
@@ -30,6 +31,7 @@ class Server
         bool handlePassword(std::vector<std::string> args);
         void privateMessage(Client *client, std::vector<std::string> args);
         int  getFdByClientName(std::string clientName);
+        Channel *getChannelByName(std::string nameChannel);
         void stop();
         Client *getClientByFd(int fd);
         

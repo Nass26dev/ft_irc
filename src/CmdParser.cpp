@@ -30,9 +30,8 @@ Command Parser::parse_string(std::string data)
     while (ss >> word)
         cmd.args.push_back(word);
 
-    if (colon_pos != std::string::npos) {
+    if (colon_pos != std::string::npos)
         cmd.args.push_back(trailing);
-    }
 
     return cmd;
 }

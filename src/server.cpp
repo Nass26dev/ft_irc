@@ -23,7 +23,7 @@ void Server::stop()
 
         close(_fds[i].fd);
     }
-    std::cout << "JE FERME LE SEVEUR " << std::endl;
+    std::cout << "JE FERME LE SEVEUR !!!!!!!!!!" << std::endl;
     _fds.clear();
 
     std::cout << _fds.size() << std::endl;
@@ -32,8 +32,8 @@ Client *Server::getClientByFd(int fd)
 {
     for(size_t i = 0; i < _clients.size();i++)
     {
-        if(_clients[i].getFd() == fd)
-            return &_clients[i];
+        if(_clients[i]->getFd() == fd)
+            return _clients[i];
     }
     return NULL;
 }
@@ -89,8 +89,10 @@ void Server::addPollAndClient(int client_fd)
     p.revents = 0;
 
     _fds.push_back(p);
+    
+    Client *client = new Client(client_fd);
 
-    _clients.push_back(Client(client_fd));
+    _clients.push_back(client);
 
 }
 
@@ -135,14 +137,23 @@ int Server::getFdByClientName(std::string clientName)
 {
     for(size_t i = 0; i < _clients.size();i++)
     {
-        if(_clients[i].getUsername() == clientName)
-        {
-            return _clients[i].getFd();
-        }
+        if(_clients[i]->getNickname() == clientName)
+            return _clients[i]->getFd();
     }
     std::cout << "on trouve pas le nom" << std::endl;
-    return 1;
+    return -1;
 }
+
+Channel *Server::getChannelByName(std::string nameChannel) 
+{
+    for (size_t i = 0; i < _channels.size(); i++) 
+    {
+        if (nameChannel == _channels[i]->getNameChannel()) 
+            return _channels[i];
+    }
+    return NULL;
+}
+
 void Server::privateMessage(Client *client, std::vector<std::string> args)
 {
     if (args.size() < 2) return;
@@ -150,16 +161,27 @@ void Server::privateMessage(Client *client, std::vector<std::string> args)
     std::string target = args[0];
     std::string msg = args[1];
 
-    int fdTarget = getFdByClientName(target);
-    if (fdTarget == -1) return;
-    
-    std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
-    
-    send(fdTarget, fullMsg.c_str(), fullMsg.length(), 0);
+
+    if (target[0] == '#') 
+    {
+        Channel* channel = getChannelByName(target);
+        if (channel == NULL)
+            return;
+        std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
+        channel->broadcastMessage(fullMsg, client->getFd());
+    } 
+    else 
+    {
+        int fdTarget = getFdByClientName(target);
+        if (fdTarget == -1) return;
+
+        std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
+        send(fdTarget, fullMsg.c_str(), fullMsg.length(), 0);
+    }
 }
 void Server::handleCommand(Client *client,std::string line)
 {
-   // std::cout << "Before parsing = " <<  line << std::endl;
+   std::cout << "Before parsing = " <<  line << std::endl;
     Command cmd  = Parser::parse_string(line);
     // if(!cmd.args[0].empty())
     // {
@@ -186,6 +208,24 @@ void Server::handleCommand(Client *client,std::string line)
     {
         //std::cout << "PRIVATE MSG" << std::endl;
         Server::privateMessage(client,cmd.args);
+    }
+    else if (cmd.cmd == "JOIN")
+    {
+        Channel* channel = NULL;
+        for (size_t i = 0; i < _channels.size(); i++) {
+            if (_channels[i]->getNameChannel() == cmd.args[0]) {
+                channel = _channels[i];
+                break;
+            }
+        }
+        if (channel == NULL) {
+            channel = new Channel(cmd.args[0]);
+            _channels.push_back(channel);
+
+        }
+        channel->addClient(client);
+        std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
+        channel->broadcastMessage(msg, -1);
     }
     else
     {

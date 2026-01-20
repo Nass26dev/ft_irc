@@ -8,14 +8,15 @@ INC_DIR = includes/
 SRCS = src/main.cpp \
        src/client.cpp \
        src/server.cpp \
-	   src/CmdParser.cpp
+	   src/CmdParser.cpp \
+	   src/Channel.cpp
 
 OBJS = $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(OBJS:.o=.d)
 
 all: $(NAME)
 
-$(OBJ_DIR)/%.o: src/%.cpp $(INC_DIR)/Client.hpp $(INC_DIR)/Server.hpp
+$(OBJ_DIR)/%.o: src/%.cpp $(INC_DIR)/Client.hpp $(INC_DIR)/Server.hpp $(INC_DIR)/Channel.hpp
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -I$(INC_DIR) -c $< -o $@
 
