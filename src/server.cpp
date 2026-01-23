@@ -107,7 +107,6 @@ void Server::handleNick(Client *client,std::vector<std::string> args)
 {
     if(args.empty())
         return ;
-    
     std::string new_nick = args[0];
     client->setNickname(new_nick);
    // std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
@@ -235,7 +234,7 @@ void Server::handleCommand(Client *client,std::string line)
     {
         
         Channel *channel = findChannel(cmd.args[0]);
-        
+        std::string providedPass = (cmd.args.size() > 1) ? cmd.args[1] : "";
         if (channel == NULL) 
         {
             channel = new Channel(cmd.args[0]);
@@ -243,8 +242,16 @@ void Server::handleCommand(Client *client,std::string line)
             channel->addOperator(client);
 
         }
+        if (channel->getPasswordBool())
+        {
+            if (!channel->checkPassword(providedPass))
+            {
+                std::string err = ":server 475 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+k)\r\n";
+                send(client->getFd(), err.c_str(), err.length(), 0);
+                return;
+            }
+        }
         channel->addClient(client,channel);
-       
     }
     else if (cmd.cmd == "KICK")
     {
@@ -345,8 +352,10 @@ void Server::handleCommand(Client *client,std::string line)
                 channel->setPasswordChannel("");
         }
         std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " " + modes;
-        if (flag == 'k' && active) msg += " " + cmd.args[2];
-        msg += "\r\n";        
+        if (flag == 'k' && active && cmd.args.size() >= 3) 
+            msg += " " + cmd.args[2] + "\r\n";
+        else
+            msg = ":Unset password \r\n";        
         channel->broadcastMessage(msg, -1);
     }
     else

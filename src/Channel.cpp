@@ -68,9 +68,24 @@ void Channel::broadcastMessage(std::string msg, int excludeFd)
         }
     }
 }
-void Channel::setPasswordChannel(std::string passwordChannel)
+
+bool Channel::getPasswordBool() 
+{
+    return _passwordBool;
+}
+
+bool Channel::checkPassword(std::string password) 
+{
+ 
+    if (!_passwordBool) 
+        return true;
+    return (_passwordChannel == password);
+}
+
+void Channel::setPasswordChannel(std::string passwordChannel) 
 {
     _passwordChannel = passwordChannel;
+    _passwordBool = !passwordChannel.empty();
 }
 Client *Channel::findClientInChannel(std::string nameClient)
 {

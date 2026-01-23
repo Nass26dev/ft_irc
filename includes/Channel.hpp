@@ -15,6 +15,7 @@ class Channel
         std::string _nameChannel;
         std::string _topic;
         std::string _passwordChannel;
+        bool _passwordBool;
         bool _inviteOnly;
         bool _topicRestriction;
         std::vector<Client*> _clients;
@@ -40,6 +41,8 @@ class Channel
         void addClient(Client *client,Channel *channel);
         void addOperator(Client *client);
         bool isOperator(Client *client);
+        bool getPasswordBool();
+        bool checkPassword(std::string password);
         Client *findClientInChannel(std::string nameClient);
         std::string getNameChannel();
         void removeClient(Client *client);
