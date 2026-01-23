@@ -49,7 +49,7 @@ void Channel::broadcastMessage(std::string msg, int excludeFd)
     }
 }
 
-Client *Channel::findClient(std::string nameClient)
+Client *Channel::findClientInChannel(std::string nameClient)
 {
     for(size_t i = 0;i < _clients.size(); i++)
     {
@@ -97,4 +97,9 @@ bool Channel::isOperator(Client *client)
             return true;
     }
     return false;
+}
+
+void Channel::addToInviteList(Client *client)
+{
+    _inviteList.push_back(client);
 }

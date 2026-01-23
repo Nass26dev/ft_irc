@@ -192,6 +192,15 @@ Channel *Server::findChannel(std::string nameChannel)
     }
     return channel;
 }
+Client *Server::findClient(std::string nameClient)
+{
+    for(size_t i = 0;i < _clients.size(); i++)
+    {
+        if(_clients[i]->getNickname() == nameClient)
+            return _clients[i];
+    }
+    return NULL;
+}
 void Server::handleCommand(Client *client,std::string line)
 {
    std::cout << "Before parsing = " <<  line << std::endl;
@@ -245,13 +254,38 @@ void Server::handleCommand(Client *client,std::string line)
             return;
         std::string targetNick = cmd.args[1];
         std::string reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
-        Client *target = channel->findClient(targetNick);
+        Client *target = channel->findClientInChannel(targetNick);
         if (target == NULL) 
             return;
 
         std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
+    }
+    else if (cmd.cmd == "INVITE")
+    {
+        if (cmd.args.size() < 2) return; 
+
+        std::string targetNick = cmd.args[0]; 
+        std::string channelName = cmd.args[1]; 
+
+        Channel *channel = findChannel(channelName);
+        
+        if (!channel || !channel->isOperator(client))
+            return;
+
+        Client *target = findClient(targetNick); 
+        if (target == NULL) 
+            return;
+
+        std::string inviteMsg = ":" + client->getNickname() + " INVITE " + targetNick + " :" + channel->getNameChannel() + "\r\n";
+        send(target->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
+
+        std::string rpl = ":server 341 " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
+        send(client->getFd(), rpl.c_str(), rpl.length(), 0);
+
+
+        channel->addToInviteList(target);
     }
     else
     {
