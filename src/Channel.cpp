@@ -33,18 +33,68 @@ Channel::~Channel()
 {
 }
 
-void Channel::broadcastMessage(std::string msg, int excludeFd) {
-    for (size_t i = 0; i < _clients.size(); i++) {
+void Channel::broadcastMessage(std::string msg, int excludeFd) 
+{
+    for (size_t i = 0; i < _clients.size(); i++) 
+    {
         int currentFd = _clients[i]->getFd();
 
-        if (currentFd != excludeFd) {
-            if (send(currentFd, msg.c_str(), msg.length(), 0) == -1) {
+        if (currentFd != excludeFd) 
+        {
+            if (send(currentFd, msg.c_str(), msg.length(), 0) == -1) 
+            {
                 std::cerr << "Error sending to FD: " << currentFd << std::endl;
             }
         }
     }
 }
 
-void Channel::addClient(Client *client) {
+Client *Channel::findClient(std::string nameClient)
+{
+    for(size_t i = 0;i < _clients.size(); i++)
+    {
+        if(_clients[i]->getNickname() == nameClient)
+            return _clients[i];
+    }
+    return NULL;
+}
+
+void Channel::removeClient(Client *client)
+{
+    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) 
+    {
+        if ((*it) == client) 
+        {
+            _clients.erase(it);
+            break;
+        }
+    }
+    
+    for (std::vector<Client*>::iterator it = _operators.begin(); it != _operators.end(); ++it) 
+    {
+        if ((*it) == client) 
+        {
+            _operators.erase(it);
+            break;
+        }
+    }
+}
+void Channel::addClient(Client *client) 
+{
     _clients.push_back(client);
+}
+
+void Channel::addOperator(Client *client) 
+{
+    _operators.push_back(client);
+}
+
+bool Channel::isOperator(Client *client) 
+{
+    for (size_t i = 0; i < _operators.size(); i++) 
+    {
+        if (_operators[i]->getFd() == client->getFd())
+            return true;
+    }
+    return false;
 }

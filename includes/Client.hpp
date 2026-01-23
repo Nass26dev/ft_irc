@@ -9,7 +9,6 @@ class Client
         std::string _nickname;
         std::string _username;
         std::string _buffer;
-        bool _isOperator;
         bool _isRegistered;
         bool _isAuthenticated;
         

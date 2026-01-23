@@ -28,9 +28,11 @@ class Channel
         void setTopic(std::string topic);
 
         void addClient(Client *client);
-
+        void addOperator(Client *client);
+        bool isOperator(Client *client);
+        Client *findClient(std::string nameClient);
         std::string getNameChannel();
-
+        void removeClient(Client *client);
         std::string getTopic();
 };
 

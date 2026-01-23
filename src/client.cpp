@@ -2,9 +2,8 @@
 
 
 
-Client::Client(int fd) : _fd(fd) , _isOperator(false) , _isRegistered(false) , _isAuthenticated(false)
+Client::Client(int fd) : _fd(fd) , _isRegistered(false) , _isAuthenticated(false)
 { 
-    (void)_isOperator;
     _nickname = "";
     _username = "";
     std::cout << _fd << std::endl;

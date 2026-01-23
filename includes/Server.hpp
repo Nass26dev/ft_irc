@@ -32,6 +32,8 @@ class Server
         void privateMessage(Client *client, std::vector<std::string> args);
         int  getFdByClientName(std::string clientName);
         Channel *getChannelByName(std::string nameChannel);
+
+        Channel *findChannel(std::string nameChannel);
         void stop();
         Client *getClientByFd(int fd);
         

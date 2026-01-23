@@ -179,6 +179,19 @@ void Server::privateMessage(Client *client, std::vector<std::string> args)
         send(fdTarget, fullMsg.c_str(), fullMsg.length(), 0);
     }
 }
+Channel *Server::findChannel(std::string nameChannel)
+{
+    Channel* channel = NULL;
+    for (size_t i = 0; i < _channels.size(); i++) 
+    {
+        if (_channels[i]->getNameChannel() == nameChannel) 
+        {
+            channel = _channels[i];
+            break;
+        }
+    }
+    return channel;
+}
 void Server::handleCommand(Client *client,std::string line)
 {
    std::cout << "Before parsing = " <<  line << std::endl;
@@ -211,21 +224,34 @@ void Server::handleCommand(Client *client,std::string line)
     }
     else if (cmd.cmd == "JOIN")
     {
-        Channel* channel = NULL;
-        for (size_t i = 0; i < _channels.size(); i++) {
-            if (_channels[i]->getNameChannel() == cmd.args[0]) {
-                channel = _channels[i];
-                break;
-            }
-        }
-        if (channel == NULL) {
+        
+        Channel *channel = findChannel(cmd.args[0]);
+        
+        if (channel == NULL) 
+        {
             channel = new Channel(cmd.args[0]);
             _channels.push_back(channel);
+            channel->addOperator(client);
 
         }
         channel->addClient(client);
         std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
         channel->broadcastMessage(msg, -1);
+    }
+    else if (cmd.cmd == "KICK")
+    {
+        Channel *channel = findChannel(cmd.args[0]);
+        if (!channel || !channel->isOperator(client))
+            return;
+        std::string targetNick = cmd.args[1];
+        std::string reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
+        Client *target = channel->findClient(targetNick);
+        if (target == NULL) 
+            return;
+
+        std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
+        channel->broadcastMessage(kickMsg, -1);
+        channel->removeClient(target);
     }
     else
     {
