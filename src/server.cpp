@@ -243,9 +243,8 @@ void Server::handleCommand(Client *client,std::string line)
             channel->addOperator(client);
 
         }
-        channel->addClient(client);
-        std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
-        channel->broadcastMessage(msg, -1);
+        channel->addClient(client,channel);
+       
     }
     else if (cmd.cmd == "KICK")
     {
@@ -284,8 +283,71 @@ void Server::handleCommand(Client *client,std::string line)
         std::string rpl = ":server 341 " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
         send(client->getFd(), rpl.c_str(), rpl.length(), 0);
 
-
         channel->addToInviteList(target);
+    }
+    else if(cmd.cmd == "TOPIC")
+    {
+        std::string target = cmd.args[0];
+        Channel *channel = NULL;
+
+        if (target[0] == '#' && cmd.args.size() == 1) 
+        {
+            channel = findChannel(target);
+            if(!channel)
+                return;
+            if (channel->getTopic().empty()) 
+            {
+                std::string msg = ":server 331 " + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
+                send(client->getFd(), msg.c_str(), msg.length(), 0);
+            } 
+            else 
+            {
+                std::string msg = ":server 332 " + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
+                send(client->getFd(), msg.c_str(), msg.length(), 0);
+            }
+
+        }
+        else if(target[0] == '#' && cmd.args.size() == 2)
+        {
+
+            channel = findChannel(target);
+            if(!channel)
+                return;
+            channel->setTopic(cmd.args[1],client);
+            std::string msg = ":" + client->getNickname() + " TOPIC " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
+            channel->broadcastMessage(msg, -1);
+        }
+    }
+    else if (cmd.cmd == "MODE")
+    {
+        if (cmd.args.size() < 2) return;
+
+        Channel *channel = findChannel(cmd.args[0]);
+        if (!channel || !channel->isOperator(client)) return;
+
+        std::string modes = cmd.args[1]; 
+        bool active = (modes[0] == '+');
+        char flag = modes[1];
+
+        if (flag == 'i') 
+        {
+            channel->setInviteOnly(active);
+        } 
+        else if (flag == 't') 
+        {
+            channel->setTopicRestriction(active);
+        } 
+        else if (flag == 'k') 
+        {
+            if (active && cmd.args.size() >= 3)
+                channel->setPasswordChannel(cmd.args[2]);
+            else
+                channel->setPasswordChannel("");
+        }
+        std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " " + modes;
+        if (flag == 'k' && active) msg += " " + cmd.args[2];
+        msg += "\r\n";        
+        channel->broadcastMessage(msg, -1);
     }
     else
     {

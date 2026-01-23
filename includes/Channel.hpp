@@ -14,6 +14,9 @@ class Channel
         int _fdChannel;
         std::string _nameChannel;
         std::string _topic;
+        std::string _passwordChannel;
+        bool _inviteOnly;
+        bool _topicRestriction;
         std::vector<Client*> _clients;
         std::vector<Client*> _operators;
         std::vector<Client*> _inviteList;
@@ -26,10 +29,15 @@ class Channel
         
         void setNameChannel(std::string nameChannel);
         void setChannelFd(int fdChannel);
-        void setTopic(std::string topic);
+        void setTopic(std::string topic,Client *client);
 
+        void setInviteOnly(bool active);
+        void setTopicRestriction(bool active);
+
+        void setPasswordChannel(std::string passwordChannel);
+        bool getInviteOnly();
         void addToInviteList(Client *client);
-        void addClient(Client *client);
+        void addClient(Client *client,Channel *channel);
         void addOperator(Client *client);
         bool isOperator(Client *client);
         Client *findClientInChannel(std::string nameClient);
