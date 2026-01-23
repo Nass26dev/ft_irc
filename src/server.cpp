@@ -355,7 +355,7 @@ void Server::handleCommand(Client *client,std::string line)
         if (flag == 'k' && active && cmd.args.size() >= 3) 
             msg += " " + cmd.args[2] + "\r\n";
         else
-            msg = ":Unset password \r\n";        
+           msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " -k\r\n";
         channel->broadcastMessage(msg, -1);
     }
     else
