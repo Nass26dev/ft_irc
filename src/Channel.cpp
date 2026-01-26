@@ -1,5 +1,5 @@
 #include "../includes/Channel.hpp"
-
+#include <climits>
 
 void Channel::setChannelFd(int fdChannel)
 {
@@ -32,12 +32,24 @@ std::string Channel::getNameChannel()
 }
 
 Channel::Channel(std::string nameChannel) 
-: _nameChannel(nameChannel)
+: _nameChannel(nameChannel) , _userLimit(INT_MAX) ,_usersOnline(0)
 {
 }
 
 Channel::~Channel()
 {
+}
+
+int Channel::getUserOnline()
+{
+    return _usersOnline;
+}
+void Channel::setUserOnline(bool flag)
+{
+    if(flag)
+        _usersOnline++;
+    else
+        _usersOnline--;
 }
 void Channel::setTopicRestriction(bool active)
 {
@@ -96,6 +108,10 @@ Client *Channel::findClientInChannel(std::string nameClient)
     }
     return NULL;
 }
+int Channel::getUserLimit()
+{
+    return _userLimit;
+}
 
 void Channel::removeClient(Client *client)
 {
@@ -141,7 +157,10 @@ void Channel::addClient(Client *client,Channel *channel)
     }
     return;
 }
-
+void Channel::setUserLimit(int limit)
+{
+    _userLimit = limit;
+}
 void Channel::addOperator(Client *client) 
 {
     _operators.push_back(client);

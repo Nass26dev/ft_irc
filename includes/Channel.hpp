@@ -18,6 +18,8 @@ class Channel
         bool _passwordBool;
         bool _inviteOnly;
         bool _topicRestriction;
+        int _userLimit;
+        int _usersOnline;
         std::vector<Client*> _clients;
         std::vector<Client*> _operators;
         std::vector<Client*> _inviteList;
@@ -32,9 +34,13 @@ class Channel
         void setChannelFd(int fdChannel);
         void setTopic(std::string topic,Client *client);
 
+
+        void setUserOnline(bool flag);
+        int  getUserOnline();
         void setInviteOnly(bool active);
         void setTopicRestriction(bool active);
-
+        void setUserLimit(int limit);
+        int  getUserLimit();
         void setPasswordChannel(std::string passwordChannel);
         bool getInviteOnly();
         void addToInviteList(Client *client);

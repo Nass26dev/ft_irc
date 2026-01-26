@@ -251,6 +251,7 @@ void Server::handleCommand(Client *client,std::string line)
                 return;
             }
         }
+        channel->setUserOnline(true);
         channel->addClient(client,channel);
     }
     else if (cmd.cmd == "KICK")
@@ -339,6 +340,30 @@ void Server::handleCommand(Client *client,std::string line)
         if (flag == 'i') 
         {
             channel->setInviteOnly(active);
+        }
+        else if(flag == 'l' )//&& channel->getUserOnline() < atoi(cmd.args[3].c_str()))
+        {
+            bool isValid = true;
+            std::cout << "ICI ==== " <<cmd.args[2] << std::endl;
+            // if (cmd.args.size() < 3)
+            //     isValid = false;
+                for(size_t i = 0; i < cmd.args[2].length(); i++) 
+                {
+                    if(!isdigit(cmd.args[2][i]))
+                    {
+                        isValid = false;
+                        break;
+                    }
+                }
+            if(!isValid)
+                std::string msg = ":" + channel->getNameChannel() + " 461 " + client->getNickname() + " MODE +l :Not enough parameters\r\n";
+            else if(channel->isOperator(client))
+            {
+                channel->setUserLimit(atoi(cmd.args[2].c_str()));
+                std::string msg = ":" + client->getNickname() + "!" + channel->getNameChannel() + " MODE " + channel->getNameChannel() + " +l " + cmd.args[2] + "\r\n";
+                channel->broadcastMessage(msg, -1);
+                return;
+            }
         } 
         else if (flag == 't') 
         {
