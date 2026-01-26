@@ -1,5 +1,5 @@
-#ifndef CMD_PARSER
-#define CMD_PARSER
+#pragma once
+
 #include <iostream>
 #include <vector>
 
@@ -21,9 +21,3 @@ class Parser
     private:
         Parser();
 };
-
-
-
-
-
-#endif

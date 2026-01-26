@@ -6,13 +6,13 @@
 
 bool server_running = true;
 
-
 void signalHandler(int signum) 
 {
     (void)signum; 
     std::cout << "\nSignal reçu, arrêt du serveur..." << std::endl;
     server_running = false;
 }
+
 int checker_entry(std::string port, std::string password)
 {
     for (size_t i = 0; i < password.length(); i++)
@@ -43,8 +43,6 @@ int checker_entry(std::string port, std::string password)
     return 0;
 }
 
-
-
 int main(int argc,char **argv)
 {
     std::signal(SIGINT, signalHandler);
@@ -58,5 +56,5 @@ int main(int argc,char **argv)
         return 1;
         
     Server a(atoi(argv[1]),argv[2]);
-   a.init();
+    a.init();
 }

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <vector>
 
@@ -31,5 +32,3 @@ class Client
         std::string getUsername();
         ~Client();
 };
-
-

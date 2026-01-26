@@ -5,9 +5,11 @@
 #include <poll.h>
 #include "Channel.hpp"
 
+extern bool server_running;
+
 class Client;
 class Channel;
-extern bool server_running;
+
 class Server
 {
     private:

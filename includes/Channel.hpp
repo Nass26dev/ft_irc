@@ -1,6 +1,5 @@
+#pragma once
 
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
 #include <iostream>
 #include <vector>
 #include "Client.hpp"
@@ -33,8 +32,6 @@ class Channel
         void setNameChannel(std::string nameChannel);
         void setChannelFd(int fdChannel);
         void setTopic(std::string topic,Client *client);
-
-
         void setUserOnline(bool flag);
         int  getUserOnline();
         void setInviteOnly(bool active);
@@ -55,5 +52,3 @@ class Channel
         std::string getTopic();
         
 };
-
-#endif
