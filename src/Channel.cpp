@@ -135,6 +135,8 @@ void Channel::removeClient(Client *client)
 }
 void Channel::addClient(Client *client,Channel *channel) 
 {
+    bool isInvited = false;
+
     if(_inviteOnly == false)
     {
         _clients.push_back(client);
@@ -152,9 +154,17 @@ void Channel::addClient(Client *client,Channel *channel)
                 _clients.push_back(client);
                  std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
                 channel->broadcastMessage(msg, -1);
+                isInvited = true;
             }
         }
     }
+    if(!isInvited)
+    {
+        std::string msg = "473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+i)\r\n";
+        send(client->getFd(), msg.c_str(), msg.length(), 0);
+        return;
+    }
+        
     return;
 }
 void Channel::setUserLimit(int limit)
