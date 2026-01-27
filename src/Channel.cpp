@@ -35,7 +35,13 @@ std::string Channel::getNameChannel()
 }
 
 Channel::Channel(std::string nameChannel) 
-: _nameChannel(nameChannel) , _userLimit(INT_MAX) ,_usersOnline(0)
+: _fdChannel(-1),             
+  _nameChannel(nameChannel),
+  _passwordBool(false),     
+  _inviteOnly(false),
+  _topicRestriction(false),  
+  _userLimit(INT_MAX),      
+  _usersOnline(0)             
 {
 }
 
@@ -45,7 +51,7 @@ Channel::~Channel()
 
 int Channel::getUserOnline()
 {
-    return _usersOnline;
+    return (int)_clients.size();
 }
 void Channel::setUserOnline(bool flag)
 {
@@ -73,12 +79,12 @@ void Channel::broadcastMessage(std::string msg, int excludeFd)
     for (size_t i = 0; i < _clients.size(); i++) 
     {
         int currentFd = _clients[i]->getFd();
-
         if (currentFd != excludeFd) 
         {
             if (send(currentFd, msg.c_str(), msg.length(), 0) == -1) 
             {
-                std::cerr << "Error sending to FD: " << currentFd << std::endl;
+                std::cerr << "Failed to send message to FD: " << currentFd << std::endl;
+                continue; 
             }
         }
     }
@@ -135,6 +141,14 @@ void Channel::removeClient(Client *client)
             break;
         }
     }
+     for (std::vector<Client*>::iterator it = _inviteList.begin(); it != _inviteList.end(); ++it) 
+    {
+        if ((*it) == client) 
+        {
+            _inviteList.erase(it);
+            break;
+        }
+    }
 }
 bool Channel::getTopicRestriction()
 {
@@ -151,41 +165,38 @@ void Channel::removeOperator(Client *client)
         }
     }
 }
-
-void Channel::addClient(Client *client,Channel *channel) 
+void Channel::addClient(Client *client, Channel *channel) 
 {
-    bool isInvited = false;
-
-    if(_inviteOnly == false)
+    if (_userLimit != INT_MAX && _clients.size() >= (size_t)_userLimit)
     {
-        _clients.push_back(client);
-        std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
-        channel->broadcastMessage(msg, -1);
+        std::string err = ":server 471 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+l)\r\n";
+        send(client->getFd(), err.c_str(), err.length(), 0);
         return;
     }
-    else
+
+    if (_inviteOnly == true)
     {
+        bool isInvited = false;
         for (size_t i = 0; i < _inviteList.size(); i++) 
         {
             if (_inviteList[i]->getFd() == client->getFd())
             {
-
-                _clients.push_back(client);
-                 std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" + " JOIN " + channel->getNameChannel() + "\r\n";
-                channel->broadcastMessage(msg, -1);
                 isInvited = true;
+                break;
             }
         }
+        if (!isInvited)
+        {
+            std::string err = ":server 473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+i)\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return; 
+        }
     }
-    if(!isInvited)
-    {
-        std::string msg = "473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (invite only)\r\n";
-        send(client->getFd(), msg.c_str(), msg.length(), 0);
-        return;
-    }
-        
-    return;
+    _clients.push_back(client);
+    std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost JOIN " + channel->getNameChannel() + "\r\n";
+    channel->broadcastMessage(msg, -1);
 }
+
 void Channel::setUserLimit(int limit)
 {
     _userLimit = limit;
