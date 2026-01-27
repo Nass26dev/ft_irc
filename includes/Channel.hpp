@@ -43,7 +43,6 @@ class Channel
         void setUserLimit(int limit);
         int  getUserLimit();
         void setPasswordChannel(std::string passwordChannel);
-        bool getInviteOnly();
         void addToInviteList(Client *client);
         void addClient(Client *client,Channel *channel);
         void addOperator(Client *client);

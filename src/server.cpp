@@ -111,8 +111,6 @@ void Server::handleNick(Client *client,std::vector<std::string> args)
         return ;
     std::string new_nick = args[0];
     client->setNickname(new_nick);
-   // std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
-
 }
 void Server::handleUsername(Client *client,std::vector<std::string> args)
 {
@@ -273,8 +271,12 @@ void Server::handleCommand(Client *client,std::string line)
 
         std::string targetNick = cmd.args[0]; 
         std::string channelName = cmd.args[1]; 
-
         Channel *channel = findChannel(channelName);
+        
+        if(targetNick == "BOT")
+        {
+            
+        }
         
         if (!channel || !channel->isOperator(client))
             return;
@@ -458,6 +460,7 @@ void Server::listening()
         {
             if (_fds[i].revents & POLLIN)
             {
+
                 if (_fds[i].fd == _server_fd)
                 {
                     int client_fd = accept(_server_fd, NULL, NULL);
