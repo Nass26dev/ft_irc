@@ -14,6 +14,7 @@ class Client
         
         public:
         Client(int fd);
+        
         void appendToBuffer(const char* data, size_t len);
         bool hasLine() const;
         std::string extractLine();

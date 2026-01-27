@@ -18,16 +18,17 @@ Server::~Server() {}
 
 void Server::stop() 
 {
-
     for (size_t i = 0; i < _fds.size(); i++) 
-    {
-
         close(_fds[i].fd);
-    }
-    std::cout << "JE FERME LE SEVEUR !!!!!!!!!!" << std::endl;
     _fds.clear();
+  
+    for (size_t i = 0; i < _clients.size(); i++)
+        delete _clients[i]; 
+    _clients.clear(); 
 
-    std::cout << _fds.size() << std::endl;
+    for (size_t i = 0; i < _channels.size(); i++)
+        delete _channels[i]; 
+    _channels.clear();
 }
 Client *Server::getClientByFd(int fd)
 {
@@ -110,8 +111,6 @@ void Server::handleNick(Client *client,std::vector<std::string> args)
         return ;
     std::string new_nick = args[0];
     client->setNickname(new_nick);
-   // std::cout << "le client "<<client->getFd() << "sapelle mtn " << new_nick<< std::endl; 
-
 }
 void Server::handleUsername(Client *client,std::vector<std::string> args)
 {
@@ -205,35 +204,32 @@ void Server::handleCommand(Client *client,std::string line)
 {
    std::cout << "Before parsing = " <<  line << std::endl;
     Command cmd  = Parser::parse_string(line);
-    // if(!cmd.args[0].empty())
-    // {
-    //     std::cout << "After parseing = " << cmd.args[0] << std::endl;// "    " <<  cmd.args[1] << std::endl;
-    // }
     if(cmd.cmd == "NICK")
     {
-       // std::cout << "NICK = " << cmd.args[0] << std::endl;
         Server::handleNick(client,cmd.args);
     }
     else if(cmd.cmd == "PASS")
     {
-        //std::cout << "PASS = " << cmd.args[0] << std::endl;
        if(Server::handlePassword(cmd.args) == false)
             throw std::runtime_error("Wrong Password");
         client->setIsAuthenticated();
     }
     else if(cmd.cmd == "USER")
     {
-        //std::cout << "USER = " << cmd.args[0] << std::endl;
         Server::handleUsername(client,cmd.args);
     }
     else if (cmd.cmd == "PRIVMSG")
     {
-        //std::cout << "PRIVATE MSG" << std::endl;
         Server::privateMessage(client,cmd.args);
     }
     else if (cmd.cmd == "JOIN")
     {
-        
+        if(cmd.args[0][0] != '#')
+        {
+            std::string err = ":server 403 " + client->getNickname() + " " + cmd.args[0] + " :No such channel\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }
         Channel *channel = findChannel(cmd.args[0]);
         std::string providedPass = (cmd.args.size() > 1) ? cmd.args[1] : "";
         if (channel == NULL) 
@@ -252,7 +248,6 @@ void Server::handleCommand(Client *client,std::string line)
                 return;
             }
         }
-        channel->setUserOnline(true);
         channel->addClient(client,channel);
     }
     else if (cmd.cmd == "KICK")
@@ -276,8 +271,12 @@ void Server::handleCommand(Client *client,std::string line)
 
         std::string targetNick = cmd.args[0]; 
         std::string channelName = cmd.args[1]; 
-
         Channel *channel = findChannel(channelName);
+        
+        if(targetNick == "BOT")
+        {
+            
+        }
         
         if (!channel || !channel->isOperator(client))
             return;
@@ -309,7 +308,7 @@ void Server::handleCommand(Client *client,std::string line)
                 std::string msg = ":server 331 " + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
             } 
-            else 
+            else if(channel->getTopicRestriction())
             {
                 std::string msg = ":server 332 " + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
@@ -322,7 +321,8 @@ void Server::handleCommand(Client *client,std::string line)
             channel = findChannel(target);
             if(!channel)
                 return;
-            channel->setTopic(cmd.args[1],client);
+            if(channel->setTopic(cmd.args[1],client))
+                return;
             std::string msg = ":" + client->getNickname() + " TOPIC " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
             channel->broadcastMessage(msg, -1);
         }
@@ -343,17 +343,31 @@ void Server::handleCommand(Client *client,std::string line)
         {
             channel->setInviteOnly(active);
             std::string sign = active ? "+" : "-";
-            std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " " + sign + "i\r\n";
+            std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@" + "localhost" 
+                + " MODE " + channel->getNameChannel() + " " + sign + "i\r\n";
             channel->broadcastMessage(msg, -1);
             return;
         }
-        // else if(flag == 'o')
-        // // {
-        // //     if(channel->isOperator(client))
-        // //     {
-        // //         Client *target  = getClientByFd(getFdByClientName(cmd.args[2]));
-        // //     }
-        // }
+        else if(flag == 'o')
+        {
+            Client *target  = findClient(cmd.args[2]);
+            if(channel->isOperator(client) && active)
+            {
+                if(!target)
+                    return;
+                channel->addOperator(target);
+                std::string msg = ":" + client->getNickname() + "!" + client->getNickname() + "@" + "localhost" 
+                + " MODE " + channel->getNameChannel() + " +o " + target->getNickname() + "\r\n";
+                channel->broadcastMessage(msg,-1);
+            }
+            else if(channel->isOperator(client) && channel->isOperator(target) && !active)
+            {
+                channel->removeOperator(target);
+                std::string msg = ":" + client->getNickname() + "!" + client->getNickname() + "@" + "localhost" 
+                + " MODE " + channel->getNameChannel() + " -o " + target->getNickname() + "\r\n";
+                channel->broadcastMessage(msg,-1);
+            }
+        }
         else if(flag == 'l')
         {
             bool isValid = true;
@@ -362,7 +376,6 @@ void Server::handleCommand(Client *client,std::string line)
                 isValid = false;
             else
             {
-
                 for(size_t i = 0; i < cmd.args[2].length(); i++) 
                 {
                     if(!isdigit(cmd.args[2][i]))
@@ -372,7 +385,7 @@ void Server::handleCommand(Client *client,std::string line)
                     }
                 }
             }
-            if(!isValid && !desactive)
+            if(!isValid && !desactive && atoi(cmd.args[2].c_str()) < channel->getUserOnline())
             {
                 std::string msg = ": NOTICE " + channel->getNameChannel() + " :Mode +l: Number is missing or invalid.\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
@@ -424,7 +437,6 @@ void Server::handleCommand(Client *client,std::string line)
         return;
     }
 
-  //  std::cout << client->getIsRegistered()<< "     " << client->getIsAuthenticated() << std::endl;
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
@@ -448,6 +460,7 @@ void Server::listening()
         {
             if (_fds[i].revents & POLLIN)
             {
+
                 if (_fds[i].fd == _server_fd)
                 {
                     int client_fd = accept(_server_fd, NULL, NULL);

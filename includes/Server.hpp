@@ -38,5 +38,3 @@ class Server
         Client *getClientByFd(int fd);
         
 };
-
-
