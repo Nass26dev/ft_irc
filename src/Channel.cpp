@@ -10,16 +10,19 @@ void Channel::setNameChannel(std::string nameChannel)
 {
     _nameChannel = nameChannel;
 }
-void Channel::setTopic(std::string topic,Client *client)
+int Channel::setTopic(std::string topic,Client *client)
 {
     if(_topicRestriction == false)
-        _topic = topic;
-    else
     {
-        if(isOperator(client))
-            _topic = topic;
+        _topic = topic;
+        return 0;
     }
-    return;
+    else if(isOperator(client))
+    {
+        _topic = topic;
+        return 0;
+    }
+    return 1;
 }
 
 std::string Channel::getTopic()
@@ -133,6 +136,22 @@ void Channel::removeClient(Client *client)
         }
     }
 }
+bool Channel::getTopicRestriction()
+{
+    return _topicRestriction;
+}
+void Channel::removeOperator(Client *client)
+{
+    for (std::vector<Client*>::iterator it = _operators.begin(); it != _operators.end(); ++it) 
+    {
+        if ((*it) == client) 
+        {
+            _operators.erase(it);
+            break;
+        }
+    }
+}
+
 void Channel::addClient(Client *client,Channel *channel) 
 {
     bool isInvited = false;
@@ -160,7 +179,7 @@ void Channel::addClient(Client *client,Channel *channel)
     }
     if(!isInvited)
     {
-        std::string msg = "473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+i)\r\n";
+        std::string msg = "473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (invite only)\r\n";
         send(client->getFd(), msg.c_str(), msg.length(), 0);
         return;
     }

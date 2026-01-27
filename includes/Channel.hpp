@@ -32,13 +32,14 @@ class Channel
         
         void setNameChannel(std::string nameChannel);
         void setChannelFd(int fdChannel);
-        void setTopic(std::string topic,Client *client);
+        int setTopic(std::string topic,Client *client);
 
 
         void setUserOnline(bool flag);
         int  getUserOnline();
         void setInviteOnly(bool active);
         void setTopicRestriction(bool active);
+        bool getTopicRestriction();
         void setUserLimit(int limit);
         int  getUserLimit();
         void setPasswordChannel(std::string passwordChannel);
@@ -52,6 +53,7 @@ class Channel
         Client *findClientInChannel(std::string nameClient);
         std::string getNameChannel();
         void removeClient(Client *client);
+        void removeOperator(Client *client);
         std::string getTopic();
         
 };
