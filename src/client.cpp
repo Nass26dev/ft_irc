@@ -6,7 +6,6 @@ Client::Client(int fd) : _fd(fd) , _isRegistered(false) , _isAuthenticated(false
 { 
     _nickname = "";
     _username = "";
-    std::cout << _fd << std::endl;
 }
 
 Client::~Client()

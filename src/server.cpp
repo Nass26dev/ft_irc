@@ -100,7 +100,6 @@ void Server::addPollAndClient(int client_fd)
 
 void Server::disconnectClient(int i)
 {
-    std::cout << _fds[i].fd << "disconected" << std::endl;
     close(_fds[i].fd);
     _fds.erase(_fds.begin() + i);
 }
@@ -124,10 +123,7 @@ bool Server::handlePassword(std::vector<std::string> args)
 {
 
     if(args[0] == _password)
-    {
-        std::cout << "Acces garented" << std::endl;
         return true;
-    }
     else
         return false;
 }
@@ -139,7 +135,6 @@ int Server::getFdByClientName(std::string clientName)
         if(_clients[i]->getNickname() == clientName)
             return _clients[i]->getFd();
     }
-    std::cout << "on trouve pas le nom" << std::endl;
     return -1;
 }
 
@@ -202,10 +197,11 @@ Client *Server::findClient(std::string nameClient)
 }
 void Server::handleCommand(Client *client,std::string line)
 {
-   std::cout << "Before parsing = " <<  line << std::endl;
     Command cmd  = Parser::parse_string(line);
     if(cmd.cmd == "NICK")
     {
+        if(client->getIsAuthenticated() == false)
+           throw std::runtime_error("Wrong Password");
         Server::handleNick(client,cmd.args);
     }
     else if(cmd.cmd == "PASS")
@@ -252,15 +248,35 @@ void Server::handleCommand(Client *client,std::string line)
     }
     else if (cmd.cmd == "KICK")
     {
-        Channel *channel = findChannel(cmd.args[0]);
-        if (!channel || !channel->isOperator(client))
+        if (cmd.args.size() < 2 || cmd.args[0][0] != '#')
+        {
+            std::string err = ": NOTICE " + client->getNickname() + " KICK :Not enough parameters\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
             return;
+        }
+        std::string channelName = cmd.args[0];
         std::string targetNick = cmd.args[1];
-        std::string reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
-        Client *target = channel->findClientInChannel(targetNick);
-        if (target == NULL) 
+        Channel *channel = findChannel(channelName);
+        if (!channel)
+        {
+            std::string err = ": NOTICE " + channel->getNameChannel() + " :No such channel\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
             return;
-
+        }
+        if (!channel->isOperator(client))
+        {
+            std::string err = ": NOTICE " + channel->getNameChannel() + " :You're not channel operator\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }
+        Client *target = channel->findClientInChannel(targetNick);
+        if (!target) 
+        {
+            std::string err = ": NOTICE " + channel->getNameChannel() + " :They aren't on that channel\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }
+        std::string reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
         std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
@@ -272,11 +288,6 @@ void Server::handleCommand(Client *client,std::string line)
         std::string targetNick = cmd.args[0]; 
         std::string channelName = cmd.args[1]; 
         Channel *channel = findChannel(channelName);
-        
-        if(targetNick == "BOT")
-        {
-            
-        }
         
         if (!channel || !channel->isOperator(client))
             return;
@@ -350,7 +361,19 @@ void Server::handleCommand(Client *client,std::string line)
         }
         else if(flag == 'o')
         {
+            if(cmd.args.size() != 3)
+            {
+                std::string msg = ": NOTICE " + channel->getNameChannel() + " :Mode +o:Not good format /mode +o <User> invalid.\r\n";
+                send(client->getFd(), msg.c_str(), msg.length(), 0);
+                return;
+            }
             Client *target  = findClient(cmd.args[2]);
+            if(!target)
+            {
+                std::string msg = ": NOTICE " + channel->getNameChannel() + " :Mode +o:Dont find client invalid.\r\n";
+                send(client->getFd(), msg.c_str(), msg.length(), 0);
+                return;
+            }
             if(channel->isOperator(client) && active)
             {
                 if(!target)
@@ -371,9 +394,20 @@ void Server::handleCommand(Client *client,std::string line)
         else if(flag == 'l')
         {
             bool isValid = true;
-            std::cout << cmd.args.size() << std::endl;
-            if(cmd.args.size() != 3)
+            if(cmd.args.size() != 3 && active)
+            {
                 isValid = false;
+                std::string msg = ": NOTICE " + channel->getNameChannel() + " :Mode +l: Number is missing or invalid.\r\n";
+                send(client->getFd(), msg.c_str(), msg.length(), 0);
+                return;
+            }
+            else if(channel->isOperator(client) && desactive)
+            {
+                channel->setUserLimit(INT_MAX);
+                std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " -l\r\n";
+                channel->broadcastMessage(msg,-1);
+                return;
+            }
             else
             {
                 for(size_t i = 0; i < cmd.args[2].length(); i++) 
@@ -385,26 +419,20 @@ void Server::handleCommand(Client *client,std::string line)
                     }
                 }
             }
-            if(!isValid && !desactive && atoi(cmd.args[2].c_str()) < channel->getUserOnline())
+            if(!isValid && !desactive)//&& atoi(cmd.args[2].c_str()) < channel->getUserOnline())
             {
                 std::string msg = ": NOTICE " + channel->getNameChannel() + " :Mode +l: Number is missing or invalid.\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
                 return;
             }
-            else if(channel->isOperator(client) && active)
+            if(channel->isOperator(client) && active)
             {
                 channel->setUserLimit(atoi(cmd.args[2].c_str()));
                 std::string msg = ":" + client->getNickname() + "!" + channel->getNameChannel() + " MODE " + channel->getNameChannel() + " +l " + cmd.args[2] + "\r\n";
                 channel->broadcastMessage(msg, -1);
                 return;
             }
-            else if(channel->isOperator(client) && desactive)
-            {
-                channel->setUserLimit(INT_MAX);
-                std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " -l\r\n";
-                channel->broadcastMessage(msg,-1);
-                return;
-            }
+            
         } 
         else if (flag == 't') 
         {
@@ -415,7 +443,7 @@ void Server::handleCommand(Client *client,std::string line)
         } 
         else if (flag == 'k') 
         {
-            if (active && cmd.args.size() >= 3)
+            if (active && cmd.args.size() == 3)
             {
                 channel->setPasswordChannel(cmd.args[2]);
                 std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " " + modes;
@@ -436,7 +464,6 @@ void Server::handleCommand(Client *client,std::string line)
     {
         return;
     }
-
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
@@ -471,6 +498,8 @@ void Server::listening()
                     char tmp_buffer[512];
                     memset(tmp_buffer, 0, sizeof(tmp_buffer));
                     int bytes = recv(_fds[i].fd,tmp_buffer, 511, 0);
+                    if(bytes == -1)
+                        stop();
                     tmp_buffer[bytes] = '\0';
                     if (bytes > 0)
                     {
@@ -490,9 +519,7 @@ void Server::listening()
                                 i--;
                                 std::cout << e.what() << std::endl;
                             }
-                            //std::cout << line << std::endl;
                         }
-                       // send(_fds[i].fd, _buffer,bytes, 0);
                     }
                     else
                     {
