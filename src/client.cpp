@@ -33,7 +33,7 @@ void Client::setUsername(std::string newUsername)
 }
 bool Client::hasLine() const 
 {
-        return _buffer.find('\n') != std::string::npos;
+    return _buffer.find('\n') != std::string::npos;
 }
 
 std::string Client::extractLine() 
@@ -43,7 +43,6 @@ std::string Client::extractLine()
 
     if (!line.empty() && line[line.size() - 1] == '\r')
         line.erase(line.size() - 1);
-
     _buffer.erase(0, pos + 1);
     return line;
 }

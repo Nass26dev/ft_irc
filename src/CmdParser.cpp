@@ -26,13 +26,10 @@ Command Parser::parse_string(std::string data)
     
     if (ss >> word)
         cmd.cmd = word;
-
     while (ss >> word)
         cmd.args.push_back(word);
-
     if (colon_pos != std::string::npos)
         cmd.args.push_back(trailing);
-
     return cmd;
 }
 

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <cstdlib>
+#include <ctime>
 #include <climits>
 
 Server::Server(int port,std::string  password) : _server_name("IRC") ,_port(port),_password(password)  {}
@@ -192,10 +193,56 @@ Client *Server::findClient(std::string nameClient)
     }
     return NULL;
 }
+
 void Server::handleCommand(Client *client,std::string line)
 {
     Command cmd  = Parser::parse_string(line);
-    if(cmd.cmd == "NICK")
+    if (cmd.cmd == "bot")
+    {
+        if (cmd.args.size() < 1 || cmd.args[0][0] != '#')
+        {
+            std::string err = ":server NOTICE " + client->getNickname() + " :Usage: BOT #channel\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }
+        
+        std::string channelName = cmd.args[0];
+        Channel *channel = findChannel(channelName);
+        
+        if (!channel)
+        {
+            std::string err = ":server NOTICE " + client->getNickname() + " :Channel " + channelName + " does not exist\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }        
+        if (!channel->findClientInChannel(client->getNickname()))
+        {
+            std::string err = ":server NOTICE " + client->getNickname() + " :You are not in channel " + channelName + "\r\n";
+            send(client->getFd(), err.c_str(), err.length(), 0);
+            return;
+        }
+        
+        srand(time(NULL));
+        bool action = rand() % 2;
+        
+        if (action == true)
+        {
+            channel->addOperator(client);
+            std::string opMsg = ":BOT MODE " + channel->getNameChannel() + " +o " + client->getNickname() + "\r\n";
+            channel->broadcastMessage(opMsg, -1);
+            std::string notice = ":BOT NOTICE " + client->getNickname() + " :You won! You are now an operator on " + channelName + "\r\n";
+            send(client->getFd(), notice.c_str(), notice.length(), 0);
+        }
+        else
+        {
+            std::string kickMsg = ":BOT KICK " + channel->getNameChannel() + " " + client->getNickname() + " :You lost the game!\r\n";
+            channel->broadcastMessage(kickMsg, -1);
+            channel->removeClient(client);
+            std::string notice = ":BOT NOTICE " + client->getNickname() + " :You lost! You have been kicked from " + channelName + "\r\n";
+            send(client->getFd(), notice.c_str(), notice.length(), 0);
+        }
+    }
+    else if(cmd.cmd == "NICK")
     {
         if(client->getIsAuthenticated() == false)
            throw std::runtime_error("Wrong Password");

@@ -10,9 +10,7 @@ class Command
         ~Command();      
         std::vector<std::string> args;
         std::string cmd;
-
 };
-
 
 class Parser
 {
@@ -21,9 +19,5 @@ class Parser
     private:
         Parser();
 };
-
-
-
-
 
 #endif

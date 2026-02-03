@@ -24,7 +24,6 @@ class Channel
         std::vector<Client*> _operators;
         std::vector<Client*> _inviteList;
     public:
-
         Channel(std::string nameChannel);
         ~Channel();
 
@@ -33,7 +32,6 @@ class Channel
         void setNameChannel(std::string nameChannel);
         void setChannelFd(int fdChannel);
         int setTopic(std::string topic,Client *client);
-
 
         void setUserOnline(bool flag);
         int  getUserOnline();
@@ -53,8 +51,7 @@ class Channel
         std::string getNameChannel();
         void removeClient(Client *client);
         void removeOperator(Client *client);
-        std::string getTopic();
-        
+        std::string getTopic();     
 };
 
 #endif
