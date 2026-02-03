@@ -33,14 +33,11 @@ void Client::setUsername(std::string newUsername)
 }
 bool Client::hasLine() const 
 {
-
-    //a voir avec hexchat car nc sans -c envoie que \n mais cest possible que hexchat envoie \r\n
-    return _buffer.find('\n') != std::string::npos;
+        return _buffer.find('\n') != std::string::npos;
 }
 
 std::string Client::extractLine() 
 {
-     //a voir avec hexchat car nc sans -c envoie que \n mais cest possible que hexchat envoie \r\n
     size_t pos = _buffer.find('\n');
     std::string line = _buffer.substr(0, pos);
 

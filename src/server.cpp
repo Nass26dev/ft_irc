@@ -276,18 +276,15 @@ void Server::handleCommand(Client *client,std::string line)
     else if (cmd.cmd == "INVITE")
     {
         if (cmd.args.size() < 2) return; 
-
         std::string targetNick = cmd.args[0]; 
         std::string channelName = cmd.args[1]; 
         Channel *channel = findChannel(channelName);
         
         if (!channel || !channel->isOperator(client))
             return;
-
         Client *target = findClient(targetNick); 
         if (target == NULL) 
             return;
-
         std::string inviteMsg = ":" + client->getNickname() + " INVITE " + targetNick + " :" + channel->getNameChannel() + "\r\n";
         send(target->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
 
@@ -316,11 +313,9 @@ void Server::handleCommand(Client *client,std::string line)
                 std::string msg = ":server 332 " + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
             }
-
         }
         else if(target[0] == '#' && cmd.args.size() == 2)
         {
-
             channel = findChannel(target);
             if(!channel)
                 return;
@@ -457,8 +452,7 @@ void Server::handleCommand(Client *client,std::string line)
                 std::string msg = ":" + client->getNickname() + " MODE " + channel->getNameChannel() + " -k\r\n";
                 channel->broadcastMessage(msg, -1);
                 return;
-            }
-                
+            }      
         }
     }
     else
@@ -466,11 +460,9 @@ void Server::handleCommand(Client *client,std::string line)
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
-
         client->setIsRegistered();
         std::string welcome = ":" + _server_name + " 001 " + client->getNickname() 
                             + " :Welcome to the IRC Network " + client->getNickname() + "\r\n";
-        
         send(client->getFd(), welcome.c_str(), welcome.length(), 0);
     }
 
@@ -486,7 +478,6 @@ void Server::listening()
         {
             if (_fds[i].revents & POLLIN)
             {
-
                 if (_fds[i].fd == _server_fd)
                 {
                     int client_fd = accept(_server_fd, NULL, NULL);
@@ -508,7 +499,7 @@ void Server::listening()
                         while(client->hasLine())
                         {
                             std::string line = client->extractLine();
-                            try
+                            try 
                             {
                                 handleCommand(client, line);
                             }

@@ -9,7 +9,7 @@ bool server_running = true;
 void signalHandler(int signum) 
 {
     (void)signum; 
-    std::cout << "\nSignal reçu, arrêt du serveur..." << std::endl;
+    std::cout << "\nSignal catched, stopping server..." << std::endl;
     server_running = false;
 }
 int checker_entry(std::string port, std::string password)

@@ -10,6 +10,7 @@ void Channel::setNameChannel(std::string nameChannel)
 {
     _nameChannel = nameChannel;
 }
+
 int Channel::setTopic(std::string topic,Client *client)
 {
     if(_topicRestriction == false)

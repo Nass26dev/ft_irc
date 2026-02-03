@@ -92,13 +92,12 @@ USER username 0 * :Real Name
 ### Network Programming
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/) — Comprehensive guide to socket programming
 - [poll() man page](https://man7.org/linux/man-pages/man2/poll.2.html) — Linux manual for poll() system call
-- [TCP/IP Sockets in C](https://www.elsevier.com/books/tcp-ip-sockets-in-c/donahoo/978-0-12-374540-8) — Practical guide for TCP/IP programming
 
 ### AI Usage
 
 AI tools (GitHub Copilot, ChatGPT) were used during the development of this project for the following tasks:
 
-- **Code suggestions and autocompletion:** Assisted in writing boilerplate code and implementing standard patterns for socket programming and command parsing
+- **Code suggestions :** Assisted in writing boilerplate code and implementing standard patterns for socket programming and command parsing
 - **Debugging assistance:** Helped identify potential bugs and memory leaks by reviewing code snippets
 - **RFC interpretation:** Clarified ambiguous parts of the IRC protocol specifications
 - **Documentation:** Helped structure and format this README file
