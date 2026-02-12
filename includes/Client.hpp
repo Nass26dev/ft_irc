@@ -11,6 +11,7 @@ class Client
         std::string _buffer;
         bool _isRegistered;
         bool _isAuthenticated;
+        int _stepFlag;
         
         public:
         Client(int fd);
@@ -24,10 +25,13 @@ class Client
         
         void setIsRegistered();
         void setIsAuthenticated();
+        void setStepFlag();
         
         int getFd() const;
         bool getIsRegistered();
         bool getIsAuthenticated();
+        int  getStepFlag();
+
         std::string getNickname();
         std::string getUsername();
         ~Client();

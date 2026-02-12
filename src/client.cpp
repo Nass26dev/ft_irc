@@ -2,7 +2,7 @@
 
 
 
-Client::Client(int fd) : _fd(fd) , _isRegistered(false) , _isAuthenticated(false)
+Client::Client(int fd) : _fd(fd) , _isRegistered(false) , _isAuthenticated(false) , _stepFlag(0)
 { 
     _nickname = "";
     _username = "";
@@ -30,6 +30,11 @@ void Client::setNickname(std::string newNickname)
 void Client::setUsername(std::string newUsername)
 {
     _username = newUsername;
+}
+
+void Client::setStepFlag()
+{
+    _stepFlag++;
 }
 bool Client::hasLine() const 
 {
@@ -63,6 +68,10 @@ bool Client::getIsAuthenticated()
 bool Client::getIsRegistered()
 {
     return _isRegistered;
+}
+int Client::getStepFlag()
+{
+    return _stepFlag;
 }
 void Client::setIsAuthenticated()
 {

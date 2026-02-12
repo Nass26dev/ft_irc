@@ -14,6 +14,11 @@ void signalHandler(int signum)
 }
 int checker_entry(std::string port, std::string password)
 {
+    if(password.empty())
+    {
+        std::cout << "Password must not be empty" << std::endl;
+        return 1;
+    }
     for (size_t i = 0; i < password.length(); i++)
     {
         if (std::isspace(static_cast<unsigned char>(password[i])))

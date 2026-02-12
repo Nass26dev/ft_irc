@@ -196,8 +196,11 @@ Client *Server::findClient(std::string nameClient)
 
 void Server::handleCommand(Client *client,std::string line)
 {
+    std::cout << "Before parsing = " << line << std::endl;
     Command cmd  = Parser::parse_string(line);
-    if (cmd.cmd == "bot")
+    std::cout << "Before parsing = " << line << std::endl;
+
+    if (cmd.cmd == "bot" && client->getStepFlag() == 3)
     {
         if (cmd.args.size() < 1 || cmd.args[0][0] != '#')
         {
@@ -242,23 +245,35 @@ void Server::handleCommand(Client *client,std::string line)
             send(client->getFd(), notice.c_str(), notice.length(), 0);
         }
     }
-    else if(cmd.cmd == "NICK")
+    else if(cmd.cmd == "NICK" && client->getStepFlag() == 1)
     {
         if(client->getIsAuthenticated() == false)
-           throw std::runtime_error("Wrong Password");
+            return;
         Server::handleNick(client,cmd.args);
+        client->setStepFlag();
     }
-    else if(cmd.cmd == "PASS")
+    else if(cmd.cmd == "PASS" && client->getStepFlag() == 0)
     {
+        if(cmd.args.size() == 0)
+        {
+            return;
+        }
        if(Server::handlePassword(cmd.args) == false)
-            throw std::runtime_error("Wrong Password");
+       {
+           std::cerr << "Wrong Password" <<std::endl; 
+           return;
+       }
         client->setIsAuthenticated();
+        client->setStepFlag();
     }
-    else if(cmd.cmd == "USER")
+    else if(cmd.cmd == "USER" && client->getStepFlag() == 2)
+    {
         Server::handleUsername(client,cmd.args);
-    else if (cmd.cmd == "PRIVMSG")
+        client->setStepFlag();
+    }
+    else if (cmd.cmd == "PRIVMSG" && client->getStepFlag() == 3)
         Server::privateMessage(client,cmd.args);
-    else if (cmd.cmd == "JOIN")
+    else if (cmd.cmd == "JOIN" && client->getStepFlag() == 3)
     {
         if(cmd.args[0][0] != '#')
         {
@@ -285,7 +300,7 @@ void Server::handleCommand(Client *client,std::string line)
         }
         channel->addClient(client,channel);
     }
-    else if (cmd.cmd == "KICK")
+    else if (cmd.cmd == "KICK" && client->getStepFlag() == 3)
     {
         if (cmd.args.size() < 2 || cmd.args[0][0] != '#')
         {
@@ -320,7 +335,7 @@ void Server::handleCommand(Client *client,std::string line)
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
     }
-    else if (cmd.cmd == "INVITE")
+    else if (cmd.cmd == "INVITE" && client->getStepFlag() == 3)
     {
         if (cmd.args.size() < 2) return; 
         std::string targetNick = cmd.args[0]; 
@@ -340,7 +355,7 @@ void Server::handleCommand(Client *client,std::string line)
 
         channel->addToInviteList(target);
     }
-    else if(cmd.cmd == "TOPIC")
+    else if(cmd.cmd == "TOPIC" && client->getStepFlag() == 3)
     {
         std::string target = cmd.args[0];
         Channel *channel = NULL;
@@ -372,7 +387,7 @@ void Server::handleCommand(Client *client,std::string line)
             channel->broadcastMessage(msg, -1);
         }
     }
-    else if (cmd.cmd == "MODE")
+    else if (cmd.cmd == "MODE" && client->getStepFlag() == 3)
     {
         if (cmd.args.size() < 2) return;
 
@@ -503,7 +518,9 @@ void Server::handleCommand(Client *client,std::string line)
         }
     }
     else
+    {
         return;
+    }
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
@@ -546,16 +563,7 @@ void Server::listening()
                         while(client->hasLine())
                         {
                             std::string line = client->extractLine();
-                            try 
-                            {
-                                handleCommand(client, line);
-                            }
-                            catch(std::exception &e)
-                            {
-                                disconnectClient(i);
-                                i--;
-                                std::cout << e.what() << std::endl;
-                            }
+                            handleCommand(client, line);
                         }
                     }
                     else
