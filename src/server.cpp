@@ -196,9 +196,7 @@ Client *Server::findClient(std::string nameClient)
 
 void Server::handleCommand(Client *client,std::string line)
 {
-    std::cout << "Before parsing = " << line << std::endl;
     Command cmd  = Parser::parse_string(line);
-    std::cout << "Before parsing = " << line << std::endl;
 
     if (cmd.cmd == "bot" && client->getStepFlag() == 3)
     {
