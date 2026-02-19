@@ -18,6 +18,14 @@ Server::Server(int port,std::string  password) : _server_name("IRC") ,_port(port
 
 Server::~Server() {}
 
+std::string getTimestamp()
+{
+    time_t now = time(0);
+    struct tm *tm_info = localtime(&now);
+    char buf[20];
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", tm_info);
+    return std::string(buf);
+}
 void Server::stop() 
 {
     for (size_t i = 0; i < _fds.size(); i++) 
@@ -90,13 +98,10 @@ void Server::addPollAndClient(int client_fd)
     p.fd = client_fd;
     p.events = POLLIN | POLLOUT;
     p.revents = 0;
-
     _fds.push_back(p);
-    
     Client *client = new Client(client_fd);
-
-    std::cout << client->getIsRegistered() << std::endl;
     _clients.push_back(client);
+    std::cout << "[" << getTimestamp() << "] [+] Client connected | fd=" << client->getFd() << std::endl;
 
 }
 
@@ -108,6 +113,7 @@ void Server::disconnectClient(int i)
     { 
         if ((*it)->getFd() == fd) 
         {
+            std::cout << "[" << getTimestamp() << "] [-] " << (*it)->getNickname() << " disconnected | fd=" << (*it)->getFd() << std::endl;
             for(size_t j = 0; j < _channels.size(); j++)
             {
                 _channels[j]->removeClient(*it);
@@ -180,6 +186,7 @@ void Server::privateMessage(Client *client, std::vector<std::string> args)
             return;
         std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
         channel->broadcastMessage(fullMsg, client->getFd());
+        std::cout << "[" << getTimestamp() << "] [MSG] [" << channel->getNameChannel() << "] " << client->getNickname() << " : " << msg << std::endl;
     } 
     else 
     {
@@ -188,6 +195,7 @@ void Server::privateMessage(Client *client, std::vector<std::string> args)
 
         std::string fullMsg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + msg + "\r\n";
         send(fdTarget, fullMsg.c_str(), fullMsg.length(), 0);
+        std::cout << "[" << getTimestamp() << "] [PM] " << client->getNickname() << " -> " << target << " : " << fullMsg << std::endl;
     }
 }
 Channel *Server::findChannel(std::string nameChannel)
@@ -275,7 +283,7 @@ void Server::passFunction(Client *client,Command cmd)
         return;
     if(Server::handlePassword(cmd.args) == false)
     {
-        std::cerr << "Wrong Password" <<std::endl; 
+        std::cerr <<"INFO " << "Wrong Password" <<std::endl; 
         return;
     }
     client->setIsAuthenticated();
@@ -308,6 +316,7 @@ void Server::joinFunction(Client *client,Command cmd)
         }
     }
     channel->addClient(client,channel);
+    std::cout << "[" << getTimestamp() << "] [JOIN] " << client->getNickname() << " joined " << channel->getNameChannel() << std::endl;
 }
 void Server::kickFunction(Client *client,Command cmd)
 {
@@ -381,6 +390,7 @@ void Server::kickFunction(Client *client,Command cmd)
         std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
+        std::cout << "[" << getTimestamp() << "] [KICK] " << client->getNickname() << " kicked " << target->getNickname() << " from " << channel->getNameChannel() << " | reason: " << reason << std::endl;
 }
 
 void Server::inviteFunction(Client *client,Command cmd)
@@ -401,6 +411,7 @@ void Server::inviteFunction(Client *client,Command cmd)
         std::string rpl = ":server " + std::string(RPL_INVITING) + " " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
         send(client->getFd(), rpl.c_str(), rpl.length(), 0);
         channel->addToInviteList(target);
+        std::cout << "[" << getTimestamp() << "] [INVITE] " << client->getNickname() << " invited " << target->getNickname() << " to " << channel->getNameChannel() << std::endl;
 }
 
 void Server::topicFunction(Client *client,Command cmd)
@@ -604,6 +615,7 @@ void Server::handleCommand(Client *client,std::string line)
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
         client->setIsRegistered();
+        std::cout << "[" << getTimestamp() << "] [AUTH] " << client->getNickname() << " registered | fd=" << client->getFd() << std::endl;
         std::string welcome = ":" + _server_name + " " + RPL_WELCOME + " " + client->getNickname() 
                             + " :Welcome to the IRC Network " + client->getNickname() + "\r\n";
         send(client->getFd(), welcome.c_str(), welcome.length(), 0);
