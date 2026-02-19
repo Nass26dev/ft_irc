@@ -213,14 +213,9 @@ Client *Server::findClient(std::string nameClient)
     }
     return NULL;
 }
-
-void Server::handleCommand(Client *client,std::string line)
+void Server::botFunction(Client *client,Command cmd)
 {
-    std::cout << "Before parsing = " << line << std::endl;
-    Command cmd  = Parser::parse_string(line);
 
-    if (cmd.cmd == "bot" && client->getStepFlag() == 3)
-    {
         if (cmd.args.size() < 1 || cmd.args[0][0] != '#')
         {
             std::string err = ":server NOTICE " + client->getNickname() + " :Usage: BOT #channel\r\n";
@@ -263,66 +258,60 @@ void Server::handleCommand(Client *client,std::string line)
             std::string notice = ":BOT NOTICE " + client->getNickname() + " :You lost! You have been kicked from " + channelName + "\r\n";
             send(client->getFd(), notice.c_str(), notice.length(), 0);
         }
-    }
-    else if(cmd.cmd == "NICK" && (client->getStepFlag() == 1 || client->getStepFlag() == 3))
-    {
-        if(client->getIsAuthenticated() == false)
+
+}
+void Server::nickFunction(Client *client,Command cmd)
+{
+    if(client->getIsAuthenticated() == false)
             return;
-        Server::handleNick(client,cmd.args);
-        if(client->getStepFlag() == 1)
-            client->setStepFlag();
-    }
-    else if(cmd.cmd == "PASS" && client->getStepFlag() == 0)
-    {
-        if(cmd.args.size() == 0)
-        {
-            return;
-        }
-       if(Server::handlePassword(cmd.args) == false)
-       {
-           std::cerr << "Wrong Password" <<std::endl; 
-           return;
-       }
-        client->setIsAuthenticated();
+    Server::handleNick(client,cmd.args);
+    if(client->getStepFlag() == 1)
         client->setStepFlag();
-    }
-    else if(cmd.cmd == "USER" && client->getStepFlag() == 2)
+}
+
+void Server::passFunction(Client *client,Command cmd)
+{
+    if(cmd.args.size() == 0)
+        return;
+    if(Server::handlePassword(cmd.args) == false)
     {
-        Server::handleUsername(client,cmd.args);
-        client->setStepFlag();
+        std::cerr << "Wrong Password" <<std::endl; 
+        return;
     }
-    else if (cmd.cmd == "PRIVMSG" && client->getStepFlag() == 3)
-        Server::privateMessage(client,cmd.args);
-    else if (cmd.cmd == "JOIN" && client->getStepFlag() == 3)
+    client->setIsAuthenticated();
+    client->setStepFlag();
+}
+
+void Server::joinFunction(Client *client,Command cmd)
+{
+    if(cmd.args[0][0] != '#')
     {
-        if(cmd.args[0][0] != '#')
+        std::string err = ":server " + std::string(ERR_NOSUCHCHANNEL) + client->getNickname() + " " + cmd.args[0] + " :No such channel\r\n";
+        send(client->getFd(), err.c_str(), err.length(), 0);
+        return;
+    }
+    Channel *channel = findChannel(cmd.args[0]);
+    std::string providedPass = (cmd.args.size() > 1) ? cmd.args[1] : "";
+    if (channel == NULL) 
+    {
+        channel = new Channel(cmd.args[0]);
+        _channels.push_back(channel);
+        channel->addOperator(client);
+    }
+    if (channel->getPasswordBool())
+    {
+        if (!channel->checkPassword(providedPass))
         {
-            std::string err = ":server " + std::string(ERR_NOSUCHCHANNEL) + client->getNickname() + " " + cmd.args[0] + " :No such channel\r\n";
+            std::string err = ":server " + std::string(ERR_BADCHANNELKEY)+ " " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+k)\r\n";
             send(client->getFd(), err.c_str(), err.length(), 0);
             return;
         }
-        Channel *channel = findChannel(cmd.args[0]);
-        std::string providedPass = (cmd.args.size() > 1) ? cmd.args[1] : "";
-        if (channel == NULL) 
-        {
-            channel = new Channel(cmd.args[0]);
-            _channels.push_back(channel);
-            channel->addOperator(client);
-        }
-        if (channel->getPasswordBool())
-        {
-            if (!channel->checkPassword(providedPass))
-            {
-                std::string err = ":server " + std::string(ERR_BADCHANNELKEY)+ " " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+k)\r\n";
-                send(client->getFd(), err.c_str(), err.length(), 0);
-                return;
-            }
-        }
-        channel->addClient(client,channel);
     }
-    else if (cmd.cmd == "KICK" && client->getStepFlag() == 3)
-    {
-        if (cmd.args.size() < 2 )
+    channel->addClient(client,channel);
+}
+void Server::kickFunction(Client *client,Command cmd)
+{
+    if (cmd.args.size() < 2 )
         {
             std::string err461 = ":" + _server_name + " " +  ERR_NEEDMOREPARAMS+ " " + client->getNickname() + " KICK :Not enough parameters\r\n";
             send(client->getFd(), err461.c_str(), err461.length(), 0);
@@ -392,10 +381,11 @@ void Server::handleCommand(Client *client,std::string line)
         std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
-    }
-    else if (cmd.cmd == "INVITE" && client->getStepFlag() == 3)
-    {
-        if (cmd.args.size() < 2) return; 
+}
+
+void Server::inviteFunction(Client *client,Command cmd)
+{
+    if (cmd.args.size() < 2) return; 
         std::string targetNick = cmd.args[0]; 
         std::string channelName = cmd.args[1]; 
         Channel *channel = findChannel(channelName);
@@ -410,47 +400,54 @@ void Server::handleCommand(Client *client,std::string line)
 
         std::string rpl = ":server " + std::string(RPL_INVITING) + " " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
         send(client->getFd(), rpl.c_str(), rpl.length(), 0);
-
         channel->addToInviteList(target);
-    }
-    else if(cmd.cmd == "TOPIC" && client->getStepFlag() == 3)
-    {
-        std::string target = cmd.args[0];
-        Channel *channel = NULL;
+}
 
-        if (target[0] == '#' && cmd.args.size() == 1) 
+void Server::topicFunction(Client *client,Command cmd)
+{
+    std::string target = cmd.args[0];
+    Channel *channel = NULL;
+
+    if (target[0] == '#' && cmd.args.size() == 1) 
+    {
+        channel = findChannel(target);
+        if(!channel)
+            return;
+        if (channel->getTopic().empty()) 
         {
-            channel = findChannel(target);
-            if(!channel)
-                return;
-            if (channel->getTopic().empty()) 
-            {
-                std::string msg = ":server " + std::string(RPL_NOTOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
-                send(client->getFd(), msg.c_str(), msg.length(), 0);
-            } 
-            else if(channel->getTopicRestriction())
-            {
-                std::string msg = ":server " + std::string(RPL_TOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
-                send(client->getFd(), msg.c_str(), msg.length(), 0);
-            }
-        }
-        else if(target[0] == '#' && cmd.args.size() == 2)
+            std::string msg = ":server " + std::string(RPL_NOTOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
+            send(client->getFd(), msg.c_str(), msg.length(), 0);
+        } 
+        else if(channel->getTopicRestriction())
         {
-            channel = findChannel(target);
-            if(!channel)
-                return;
-            if(channel->setTopic(cmd.args[1],client))
-                return;
-            std::string msg = ":" + client->getNickname() + " TOPIC " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
-            channel->broadcastMessage(msg, -1);
+            std::string msg = ":server " + std::string(RPL_TOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
+            send(client->getFd(), msg.c_str(), msg.length(), 0);
         }
     }
-    else if (cmd.cmd == "MODE" && client->getStepFlag() == 3)
+    else if(target[0] == '#' && cmd.args.size() == 2)
     {
-        if (cmd.args.size() < 2) return;
+        channel = findChannel(target);
+        if(!channel)
+            return;
+        if(channel->setTopic(cmd.args[1],client))
+            return;
+        std::string msg = ":" + client->getNickname() + " TOPIC " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
+        channel->broadcastMessage(msg, -1);
+    }
+}
+
+void Server::modeFunction(Client *client,Command cmd)
+{
+    if (cmd.args.size() < 2) return;
 
         Channel *channel = findChannel(cmd.args[0]);
-        if (!channel || !channel->isOperator(client)) return;
+        if (!channel) return;
+        if(!channel->isOperator(client)) 
+        {
+            std::string err482 = ":" + _server_name + " " + std::string(ERR_CHANOPRIVSNEEDED) + " " + client->getNickname() + " " + cmd.args[0] + " :You're not channel operator\r\n";
+            send(client->getFd(), err482.c_str(), err482.length(), 0);
+            return;
+        }
 
         std::string modes = cmd.args[1]; 
         bool active = (modes[0] == '+');
@@ -539,12 +536,11 @@ void Server::handleCommand(Client *client,std::string line)
                 channel->broadcastMessage(msg, -1);
                 return;
             }
-            
         } 
         else if (flag == 't') 
         {
-            if (active) {
-
+            if (active) 
+            {
                 channel->setTopicRestriction(active);
                 std::string msg = ":" + client->getNickname() + "!" + channel->getNameChannel() + " MODE " + channel->getNameChannel() + " +t\r\n";
                 channel->broadcastMessage(msg, -1);
@@ -574,11 +570,36 @@ void Server::handleCommand(Client *client,std::string line)
                 return;
             }      
         }
-    }
-    else
+}
+void Server::handleCommand(Client *client,std::string line)
+{
+    Command cmd  = Parser::parse_string(line);
+
+    if (cmd.cmd == "bot" && client->getStepFlag() == 3)
+        Server::botFunction(client,cmd);
+    else if(cmd.cmd == "NICK" && (client->getStepFlag() == 1 || client->getStepFlag() == 3))
+        Server::nickFunction(client,cmd);
+    else if(cmd.cmd == "PASS" && client->getStepFlag() == 0)
+        Server::passFunction(client,cmd);
+    else if(cmd.cmd == "USER" && client->getStepFlag() == 2)
     {
-        return;
+        Server::handleUsername(client,cmd.args);
+        client->setStepFlag();
     }
+    else if (cmd.cmd == "PRIVMSG" && client->getStepFlag() == 3)
+        Server::privateMessage(client,cmd.args);
+    else if (cmd.cmd == "JOIN" && client->getStepFlag() == 3)
+        Server::joinFunction(client,cmd);
+    else if (cmd.cmd == "KICK" && client->getStepFlag() == 3)
+        Server::kickFunction(client,cmd);
+    else if (cmd.cmd == "INVITE" && client->getStepFlag() == 3)
+        Server::inviteFunction(client,cmd);
+    else if(cmd.cmd == "TOPIC" && client->getStepFlag() == 3)
+        Server::topicFunction(client,cmd);
+    else if (cmd.cmd == "MODE" && client->getStepFlag() == 3)
+        Server::modeFunction(client,cmd);
+    else
+        return;
     if (!client->getIsRegistered() && client->getIsAuthenticated() 
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {

@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <poll.h>
+#include "CmdParser.hpp"
 #include "Channel.hpp"
 
 class Client;
@@ -35,8 +36,15 @@ class Server
         Client *findClient(std::string nameClient);
         Channel *findChannel(std::string nameChannel);
 
-       // void botFunction(Command cmd,Client *client)
-        void stop();
+       void botFunction(Client *client,Command cmd);
+       void nickFunction(Client *client,Command cmd);
+       void passFunction(Client *client,Command cmd);
+       void joinFunction(Client *client,Command cmd);
+       void kickFunction(Client *client,Command cmd);
+       void inviteFunction(Client *client,Command cmd);
+       void topicFunction(Client *client,Command cmd);
+       void modeFunction(Client *client,Command cmd);
+       void stop();
         Client *getClientByFd(int fd);
         
 };
