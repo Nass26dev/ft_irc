@@ -32,7 +32,7 @@ class Channel
         void setNameChannel(std::string nameChannel);
         void setChannelFd(int fdChannel);
         int setTopic(std::string topic,Client *client);
-
+        bool isClientInChannel(Client *client);
         void setUserOnline(bool flag);
         int  getUserOnline();
         void setInviteOnly(bool active);

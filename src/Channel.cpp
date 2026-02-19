@@ -1,4 +1,5 @@
 #include "../includes/Channel.hpp"
+#include "../includes/Macro.hpp"
 #include <climits>
 
 void Channel::setChannelFd(int fdChannel)
@@ -103,7 +104,15 @@ bool Channel::checkPassword(std::string password)
         return true;
     return (_passwordChannel == password);
 }
-
+bool Channel::isClientInChannel(Client *client)
+{
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i] == client)
+            return true;
+    }
+    return false;
+}
 void Channel::setPasswordChannel(std::string passwordChannel) 
 {
     _passwordChannel = passwordChannel;
@@ -170,7 +179,7 @@ void Channel::addClient(Client *client, Channel *channel)
 {
     if (_userLimit != INT_MAX && _clients.size() >= (size_t)_userLimit)
     {
-        std::string err = ":server 471 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+l)\r\n";
+        std::string err = ":server " + std::string(ERR_CHANNELISFULL) + " " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+l)\r\n";
         send(client->getFd(), err.c_str(), err.length(), 0);
         return;
     }
@@ -188,7 +197,7 @@ void Channel::addClient(Client *client, Channel *channel)
         }
         if (!isInvited)
         {
-            std::string err = ":server 473 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+i)\r\n";
+            std::string err = ":server " + std::string(ERR_INVITEONLYCHAN) + " " +  client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+i)\r\n";
             send(client->getFd(), err.c_str(), err.length(), 0);
             return; 
         }

@@ -1,6 +1,7 @@
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/CmdParser.hpp"
+#include "../includes/Macro.hpp"
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -94,22 +95,41 @@ void Server::addPollAndClient(int client_fd)
     
     Client *client = new Client(client_fd);
 
+    std::cout << client->getIsRegistered() << std::endl;
     _clients.push_back(client);
 
 }
 
-void Server::disconnectClient(int i)
-{
-    close(_fds[i].fd);
+void Server::disconnectClient(int i) 
+{ 
+    int fd = _fds[i].fd; close(fd); 
     _fds.erase(_fds.begin() + i);
+    for(std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) 
+    { 
+        if ((*it)->getFd() == fd) 
+        {
+            for(size_t j = 0; j < _channels.size(); j++)
+            {
+                _channels[j]->removeClient(*it);
+            }
+            delete *it; 
+            _clients.erase(it); 
+            break; 
+        } 
+    }
+    return; 
 }
 
 void Server::handleNick(Client *client,std::vector<std::string> args)
 {
     if(args.empty())
         return ;
+    std::string oldNick = client->getNickname();
     std::string new_nick = args[0];
     client->setNickname(new_nick);
+
+    std::string rpl = ":" + oldNick + "!" + client->getUsername() + "@" + "localhost" + " NICK " + new_nick + "\r\n";
+    send(client->getFd(), rpl.c_str(), rpl.length(), 0);
 }
 void Server::handleUsername(Client *client,std::vector<std::string> args)
 {
@@ -196,6 +216,7 @@ Client *Server::findClient(std::string nameClient)
 
 void Server::handleCommand(Client *client,std::string line)
 {
+    std::cout << "Before parsing = " << line << std::endl;
     Command cmd  = Parser::parse_string(line);
 
     if (cmd.cmd == "bot" && client->getStepFlag() == 3)
@@ -243,12 +264,13 @@ void Server::handleCommand(Client *client,std::string line)
             send(client->getFd(), notice.c_str(), notice.length(), 0);
         }
     }
-    else if(cmd.cmd == "NICK" && client->getStepFlag() == 1)
+    else if(cmd.cmd == "NICK" && (client->getStepFlag() == 1 || client->getStepFlag() == 3))
     {
         if(client->getIsAuthenticated() == false)
             return;
         Server::handleNick(client,cmd.args);
-        client->setStepFlag();
+        if(client->getStepFlag() == 1)
+            client->setStepFlag();
     }
     else if(cmd.cmd == "PASS" && client->getStepFlag() == 0)
     {
@@ -275,7 +297,7 @@ void Server::handleCommand(Client *client,std::string line)
     {
         if(cmd.args[0][0] != '#')
         {
-            std::string err = ":server 403 " + client->getNickname() + " " + cmd.args[0] + " :No such channel\r\n";
+            std::string err = ":server " + std::string(ERR_NOSUCHCHANNEL) + client->getNickname() + " " + cmd.args[0] + " :No such channel\r\n";
             send(client->getFd(), err.c_str(), err.length(), 0);
             return;
         }
@@ -291,7 +313,7 @@ void Server::handleCommand(Client *client,std::string line)
         {
             if (!channel->checkPassword(providedPass))
             {
-                std::string err = ":server 475 " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+k)\r\n";
+                std::string err = ":server " + std::string(ERR_BADCHANNELKEY)+ " " + client->getNickname() + " " + channel->getNameChannel() + " :Cannot join channel (+k)\r\n";
                 send(client->getFd(), err.c_str(), err.length(), 0);
                 return;
             }
@@ -300,23 +322,53 @@ void Server::handleCommand(Client *client,std::string line)
     }
     else if (cmd.cmd == "KICK" && client->getStepFlag() == 3)
     {
-        if (cmd.args.size() < 2 || cmd.args[0][0] != '#')
+        if (cmd.args.size() < 2 )
         {
-            std::string err = ": NOTICE " + client->getNickname() + " KICK :Not enough parameters\r\n";
-            send(client->getFd(), err.c_str(), err.length(), 0);
+            std::string err461 = ":" + _server_name + " " +  ERR_NEEDMOREPARAMS+ " " + client->getNickname() + " KICK :Not enough parameters\r\n";
+            send(client->getFd(), err461.c_str(), err461.length(), 0);
             return;
         }
         std::string channelName = cmd.args[0];
         std::string targetNick = cmd.args[1];
+        if(cmd.args[1][0] == '#')
+        {
+            if (cmd.args.size() < 3)
+            {
+                std::string err461 = ":" + _server_name + " " + ERR_NEEDMOREPARAMS + " " + client->getNickname() + " KICK :Not enough parameters\r\n";
+                send(client->getFd(), err461.c_str(), err461.length(), 0);
+                return;
+            }
+            channelName = cmd.args[1];
+            targetNick = cmd.args[2];
+        }
+        if(cmd.args.size() >= 3 && cmd.args[2][0] == '#')
+        {
+            if (cmd.args.size() < 4)
+            {
+                std::string err461 = ":" + _server_name + " " + ERR_NEEDMOREPARAMS + " " + client->getNickname() + " KICK :Not enough parameters\r\n";
+                send(client->getFd(), err461.c_str(), err461.length(), 0);
+                return;
+            }
+            channelName = cmd.args[2];
+            targetNick = cmd.args[3];
+        }
         Channel *channel = findChannel(channelName);
         if (!channel)
         {
-            std::string err = ": NOTICE " + channel->getNameChannel() + " :No such channel\r\n";
-            send(client->getFd(), err.c_str(), err.length(), 0);
+            std::string err403 = ":" + _server_name + " " + ERR_NOSUCHCHANNEL+ " " + client->getNickname() + " " + channelName + " :No such channel\r\n";
+            send(client->getFd(), err403.c_str(), err403.length(), 0);
+            return;
+        }
+        if (!channel->isClientInChannel(client))
+        {
+            std::string err442 = ":" + _server_name + " " + ERR_NOTONCHANNEL + " " + client->getNickname() + " " + channelName + " :You're not on that channel\r\n";
+            send(client->getFd(), err442.c_str(), err442.length(), 0);
             return;
         }
         if (!channel->isOperator(client))
         {
+            std::string err482 = ":" + _server_name + " " + std::string(ERR_CHANOPRIVSNEEDED) + " " + client->getNickname() + " " + channelName + " :You're not channel operator\r\n";
+            send(client->getFd(), err482.c_str(), err482.length(), 0);
             std::string err = ": NOTICE " + channel->getNameChannel() + " :You're not channel operator\r\n";
             send(client->getFd(), err.c_str(), err.length(), 0);
             return;
@@ -324,11 +376,19 @@ void Server::handleCommand(Client *client,std::string line)
         Client *target = channel->findClientInChannel(targetNick);
         if (!target) 
         {
-            std::string err = ": NOTICE " + channel->getNameChannel() + " :They aren't on that channel\r\n";
-            send(client->getFd(), err.c_str(), err.length(), 0);
+            std::string err441 = ":" + _server_name + " " + std::string(ERR_USERNOTINCHANNEL) + " " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + " :They aren't on that channel\r\n";
+            send(client->getFd(), err441.c_str(), err441.length(), 0);
+            std::string notice = ":" + _server_name + " NOTICE " + channel->getNameChannel() + " :Target " + targetNick + " is not on this channel\r\n";
+            send(client->getFd(), notice.c_str(), notice.length(), 0);
             return;
         }
-        std::string reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
+        std::string reason;
+        if (cmd.args[1][0] == '#')
+            reason = (cmd.args.size() > 3) ? cmd.args[3] : "Kicked by operator";
+        else if (cmd.args.size() >= 3 && cmd.args[2][0] == '#')
+            reason = (cmd.args.size() > 4) ? cmd.args[4] : "Kicked by operator";
+        else
+            reason = (cmd.args.size() > 2) ? cmd.args[2] : "Kicked by operator";
         std::string kickMsg = ":" + client->getNickname() + " KICK " + channel->getNameChannel() + " " + targetNick + " :" + reason + "\r\n";
         channel->broadcastMessage(kickMsg, -1);
         channel->removeClient(target);
@@ -348,7 +408,7 @@ void Server::handleCommand(Client *client,std::string line)
         std::string inviteMsg = ":" + client->getNickname() + " INVITE " + targetNick + " :" + channel->getNameChannel() + "\r\n";
         send(target->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
 
-        std::string rpl = ":server 341 " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
+        std::string rpl = ":server " + std::string(RPL_INVITING) + " " + client->getNickname() + " " + targetNick + " " + channel->getNameChannel() + "\r\n";
         send(client->getFd(), rpl.c_str(), rpl.length(), 0);
 
         channel->addToInviteList(target);
@@ -365,12 +425,12 @@ void Server::handleCommand(Client *client,std::string line)
                 return;
             if (channel->getTopic().empty()) 
             {
-                std::string msg = ":server 331 " + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
+                std::string msg = ":server " + std::string(RPL_NOTOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :No topic is set\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
             } 
             else if(channel->getTopicRestriction())
             {
-                std::string msg = ":server 332 " + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
+                std::string msg = ":server " + std::string(RPL_TOPIC) + client->getNickname() + " " + channel->getNameChannel() + " :" + channel->getTopic() + "\r\n";
                 send(client->getFd(), msg.c_str(), msg.length(), 0);
             }
         }
@@ -523,11 +583,10 @@ void Server::handleCommand(Client *client,std::string line)
         && !client->getNickname().empty() && !client->getUsername().empty()) 
     {
         client->setIsRegistered();
-        std::string welcome = ":" + _server_name + " 001 " + client->getNickname() 
+        std::string welcome = ":" + _server_name + " " + RPL_WELCOME + " " + client->getNickname() 
                             + " :Welcome to the IRC Network " + client->getNickname() + "\r\n";
         send(client->getFd(), welcome.c_str(), welcome.length(), 0);
     }
-
 }
 
 void Server::listening()

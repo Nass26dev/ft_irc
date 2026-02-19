@@ -34,6 +34,8 @@ class Server
         Channel *getChannelByName(std::string nameChannel);
         Client *findClient(std::string nameClient);
         Channel *findChannel(std::string nameChannel);
+
+       // void botFunction(Command cmd,Client *client)
         void stop();
         Client *getClientByFd(int fd);
         
