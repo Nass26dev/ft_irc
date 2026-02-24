@@ -283,10 +283,13 @@ void Server::passFunction(Client *client,Command cmd)
         return;
     if(Server::handlePassword(cmd.args) == false)
     {
-        std::cerr <<"INFO " << "Wrong Password" <<std::endl; 
+        std::string err = "464 " + client->getNickname() + " :Password incorrect\r\n";
+        send(client->getFd(), err.c_str(), err.length(), 0);
+        std::cerr << "[" << getTimestamp() << "] [PASSWORD] [KO] mismatch for client " << client->getFd() << std::endl;
         return;
     }
     client->setIsAuthenticated();
+    std::cout << "[" << getTimestamp() << "] [PASSWORD] [OK] Client is authenticated " << client->getFd() << std::endl;
     client->setStepFlag();
 }
 
